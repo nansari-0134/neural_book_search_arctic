@@ -12,3 +12,12 @@ scipy>=1.10.0
 # Search & Utilities
 tqdm>=4.66.0
 huggingface-hub>=0.22.0
+
+# LangChain Integration
+langchain>=0.2.0
+langchain-huggingface>=0.0.1
+langchain-community>=0.2.0
+
+# Documentation
+mkdocs>=1.6.0
+mkdocs-material>=9.5.0
