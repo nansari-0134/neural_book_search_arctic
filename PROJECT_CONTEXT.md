@@ -36,8 +36,8 @@
 | Phase | Milestone / Task | Status | Output Artifact | Notes |
 | :---: | :--- | :---: | :--- | :--- |
 | **0** | **Environment & Repo Setup** | ✅ **COMPLETE** | `neural_book_search_arctic/` | Git initialized, `.gitignore`, clean architecture |
-| **0b** | **Documentation & Tracker Setup** | 🟡 **IN PROGRESS** | `mkdocs.yml`, `docs/`, `PROJECT_CONTEXT.md` | MkDocs Material + living documentation |
-| **1** | **Zero-Shot Baseline Benchmark** | ⏳ **PENDING** | `results/baseline_metrics.json` | Measures untouched Snowflake Arctic on test/val |
+| **0b** | **Documentation & Tracker Setup** | ✅ **COMPLETE** | `mkdocs.yml`, `docs/`, `PROJECT_CONTEXT.md` | MkDocs Material + living documentation |
+| **1** | **Zero-Shot Baseline Benchmark** | ✅ **COMPLETE** | `results/baseline_metrics.json` | Test: R@1: 21.67%, R@10: 55.40%, R@50: 69.57% |
 | **2** | **Phase 1 Contrastive Fine-Tuning** | ⏳ **PENDING** | `arctic_output/arctic_phase1/best_model` | MNRL loss + duplicate positive masking |
 | **3a** | **Iterative Negative Mining (Cycle 1)**| ⏳ **PENDING** | `data/train_arctic_v2.jsonl` | Mined using Phase 1 model + 8-layer filter |
 | **3b** | **Fine-Tuning Cycle 1** | ⏳ **PENDING** | `arctic_output/arctic_v2/best_model` | Retrain for 1 epoch on newly mined false positives |

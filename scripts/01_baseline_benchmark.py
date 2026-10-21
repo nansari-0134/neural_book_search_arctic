@@ -40,13 +40,25 @@ def main():
         model.half()
     model.eval()
 
-    # 3. Compute baseline on Validation and Test
+    # 3. Pre-encode catalog once and reuse for both validation and test
+    print(f"\n[Catalog] Pre-encoding {len(all_book_ids):,} catalog books on {DEVICE}...")
+    catalog_texts = [meta["book_texts"].get(bid, "Untitled") for bid in all_book_ids]
+    catalog_emb = model.encode(
+        catalog_texts,
+        batch_size=128 if DEVICE == "cuda" else 32,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        show_progress_bar=True
+    ).astype("float32")
+
+    # 4. Compute baseline on Validation and Test
     val_metrics = evaluate_recall(
         model=model,
         split_path=VAL_FILE,
         split_name="Baseline Validation",
         meta=meta,
-        all_book_ids=all_book_ids
+        all_book_ids=all_book_ids,
+        cached_catalog_emb=catalog_emb
     )
 
     test_metrics = evaluate_recall(
@@ -54,7 +66,8 @@ def main():
         split_path=TEST_FILE,
         split_name="Baseline Test",
         meta=meta,
-        all_book_ids=all_book_ids
+        all_book_ids=all_book_ids,
+        cached_catalog_emb=catalog_emb
     )
 
     # 4. Save results to disk
