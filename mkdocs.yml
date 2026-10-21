@@ -63,4 +63,5 @@ nav:
   - Contrastive Fine-Tuning: fine_tuning.md
   - Iterative Negative Mining: iterative_mining.md
   - Benchmark Progression: benchmarks.md
+  - Recall@K Metrics Math: metrics_explanation.md
   - Hugging Face Deployment: huggingface.md
