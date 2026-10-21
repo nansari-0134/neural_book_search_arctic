@@ -1,0 +1,14 @@
+# Core Deep Learning & NLP
+torch>=2.2.0
+sentence-transformers>=3.0.0
+transformers>=4.40.0
+datasets>=2.18.0
+accelerate>=0.28.0
+
+# Scientific & Math
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Search & Utilities
+tqdm>=4.66.0
+huggingface-hub>=0.22.0
