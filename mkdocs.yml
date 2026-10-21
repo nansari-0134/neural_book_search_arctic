@@ -1,0 +1,66 @@
+site_name: Neural Book Search (Snowflake Arctic)
+site_description: Production-grade dense book retrieval with Snowflake Arctic Embed (v1.5), contrastive learning, and iterative negative mining.
+site_author: Nizam
+repo_name: KanishShandilya/neural_book_search_arctic
+repo_url: https://github.com/KanishShandilya/neural_book_search_arctic
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Overview: index.md
+  - System Architecture: architecture.md
+  - Data Pipeline & Clustering: data_pipeline.md
+  - Contrastive Fine-Tuning: fine_tuning.md
+  - Iterative Negative Mining: iterative_mining.md
+  - Benchmark Progression: benchmarks.md
+  - Hugging Face Deployment: huggingface.md
