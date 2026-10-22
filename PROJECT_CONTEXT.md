@@ -40,7 +40,7 @@
 | **1** | **Zero-Shot Baseline Benchmark** | ✅ **COMPLETE** | `results/baseline_metrics.json` | Test: R@1: 21.67%, R@10: 55.40%, R@50: 69.57% |
 | **2** | **Phase 1 Contrastive Fine-Tuning** | ✅ **COMPLETE** | `arctic_output/arctic_phase1/best_model` | Test: R@1: 29.16%, R@10: 64.67%, R@50: 78.20% |
 | **3a** | **Iterative Negative Mining (Cycle 1)**| ✅ **COMPLETE** | `data/train_arctic_v2.jsonl` | 199,808 pairs mined; 1.8M false negatives shielded |
-| **3b** | **Fine-Tuning Cycle 1** | ⏳ **PENDING** | `arctic_output/arctic_v2/best_model` | Retrain for 1 epoch on newly mined false positives |
+| **3b** | **Fine-Tuning Cycle 1** | 🚀 **ACTIVE (OPTIMIZED)** | `arctic_output/arctic_v2/best_model` | Top-5 hard negatives; 49,952 micro-steps (~6.5h ETA vs 99h) |
 | **3c** | **Iterative Negative Mining (Cycle 2)**| ⏳ **PENDING** | `data/train_arctic_v3.jsonl` | Mined using Cycle 1 model |
 | **3d** | **Fine-Tuning Cycle 2** | ⏳ **PENDING** | `arctic_output/arctic_v3/best_model` | Progressive model evolution |
 | **4** | **Final Benchmarking & Comparison** | ⏳ **PENDING** | `results/final_comparison.json` | Side-by-side progression table |
