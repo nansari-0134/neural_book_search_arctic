@@ -57,7 +57,7 @@ def main():
     cycle_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 70, flush=True)
-    print(f"  STEP 3b: FINE-TUNING CYCLE {args.cycle} (SNOWFLAKE ARCTIC EMBED)", flush=True)
+    print(f"  STEP 3: FINE-TUNING CYCLE {args.cycle} (SNOWFLAKE ARCTIC EMBED)", flush=True)
     print(f"  Base Model: {base_model_path}", flush=True)
     print(f"  Train Data: {train_path.name}", flush=True)
     print(f"  Output Dir: {cycle_dir}", flush=True)

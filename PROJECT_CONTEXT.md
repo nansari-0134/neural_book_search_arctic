@@ -42,7 +42,7 @@
 | **3a** | **Iterative Negative Mining (Cycle 1)**| ✅ **COMPLETE** | `data/train_arctic_v2.jsonl` | 199,808 pairs mined; 1.8M false negatives shielded |
 | **3b** | **Fine-Tuning Cycle 1** | ✅ **COMPLETE** | `arctic_output/arctic_v2/best_model` | Test: R@1: 35.60%, R@10: 73.96%, R@50: 84.66% (+18.6% R@10) |
 | **3c** | **Iterative Negative Mining (Cycle 2)**| ✅ **COMPLETE** | `data/train_arctic_v3.jsonl` | 179,319 pairs mined; 1.44M false negatives shielded |
-| **3d** | **Fine-Tuning Cycle 2** | ⏳ **READY TO START** | `arctic_output/arctic_v3/best_model` | Progressive model evolution |
+| **3d** | **Fine-Tuning Cycle 2** | 🚀 **IN PROGRESS** | `arctic_output/arctic_v3/best_model` | Training on 179,319 Cycle 2 adversarial pairs (Top-5 negs) |
 | **4** | **Final Benchmarking & Comparison** | ⏳ **PENDING** | `results/final_comparison.json` | Side-by-side progression table |
 | **5** | **Hugging Face Hub Model Publication**| ⏳ **PENDING** | Hugging Face Repository | Automatic upload script with full model card |
 | **6** | **MkDocs Build & GitHub Pages Prep** | ⏳ **PENDING** | `site/` | Complete static HTML documentation site |
