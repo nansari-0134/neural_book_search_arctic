@@ -32,7 +32,7 @@ from src.metrics import evaluate_recall
 
 def encode_catalog(model: SentenceTransformer, book_meta: dict, all_book_ids: list) -> np.ndarray:
     """Encodes catalog books into normalized embeddings on GPU."""
-    print(f"[Catalog] Encoding {len(all_book_ids):,} books on {DEVICE}...")
+    print(f"[Catalog] Encoding {len(all_book_ids):,} books on {DEVICE}...", flush=True)
     t0 = time.time()
     texts = [book_meta["book_texts"][bid] for bid in all_book_ids]
 
@@ -46,7 +46,7 @@ def encode_catalog(model: SentenceTransformer, book_meta: dict, all_book_ids: li
         ).astype("float32")
 
     elapsed = time.time() - t0
-    print(f"[Catalog] Encoded {len(all_book_ids):,} books in {elapsed:.1f}s.")
+    print(f"[Catalog] Encoded {len(all_book_ids):,} books in {elapsed:.1f}s.", flush=True)
     return embeddings
 
 def mine_dataset(
@@ -58,11 +58,11 @@ def mine_dataset(
     output_file: Path,
     cycle_num: int,
 ):
-    print(f"\n=======================================================")
-    print(f"  CYCLE {cycle_num}: HARD NEGATIVE MINING (ARCTIC)")
-    print(f"  Input:  {input_file.name}")
-    print(f"  Output: {output_file.name}")
-    print(f"=======================================================")
+    print(f"\n=======================================================", flush=True)
+    print(f"  CYCLE {cycle_num}: HARD NEGATIVE MINING (ARCTIC)", flush=True)
+    print(f"  Input:  {input_file.name}", flush=True)
+    print(f"  Output: {output_file.name}", flush=True)
+    print(f"=======================================================", flush=True)
 
     query_positives = defaultdict(set)
     train_rows = []
@@ -155,6 +155,9 @@ def mine_dataset(
             for nid in new_negs:
                 neg_frequency[nid] += 1
 
+            cand_id_list = [all_book_ids[c] for c in cand_indices]
+            pos_rank_new = cand_id_list.index(pos_id) if pos_id in cand_id_list else -1
+
             # Retain prior negatives, filtering any that now match strict checks
             old_negs = []
             for oid in [str(x) for x in row.get("negative_ids", [])]:
@@ -168,8 +171,13 @@ def mine_dataset(
                     break
 
             combined_negs = new_negs + old_negs
-            if not combined_negs:
-                combined_negs = [str(x) for x in row.get("negative_ids", [])[:3]]
+            # Ensure exactly 5 negatives by backfilling from prior negatives if needed
+            if len(combined_negs) < 5:
+                for oid in [str(x) for x in row.get("negative_ids", [])]:
+                    if oid not in combined_negs and oid != pos_id:
+                        combined_negs.append(oid)
+                    if len(combined_negs) >= 5:
+                        break
 
             combined_titles = [meta["title_of"].get(nid, "Untitled") for nid in combined_negs]
 
@@ -177,7 +185,7 @@ def mine_dataset(
                 "query": row["query"],
                 "positive_id": pos_id,
                 "positive_title": pos_title,
-                "positive_rank": row.get("positive_rank", -1),
+                "positive_rank": pos_rank_new,
                 "negative_ids": combined_negs,
                 "negative_titles": combined_titles,
                 "mined_arctic_count": len(new_negs),
@@ -210,21 +218,21 @@ def main():
     input_path = Path(args.input_file)
     output_path = Path(args.output_file)
 
-    print("=" * 70)
-    print(f"  STEP 3a: HARD NEGATIVE MINING (CYCLE {args.cycle})")
-    print(f"  Model:   {model_path}")
-    print(f"  Input:   {input_path.name}")
-    print(f"  Output:  {output_path.name}")
-    print(f"  Device:  {DEVICE} (FP16: {USE_FP16})")
-    print("=" * 70)
+    print("=" * 70, flush=True)
+    print(f"  STEP 3: HARD NEGATIVE MINING (CYCLE {args.cycle})", flush=True)
+    print(f"  Model:   {model_path}", flush=True)
+    print(f"  Input:   {input_path.name}", flush=True)
+    print(f"  Output:  {output_path.name}", flush=True)
+    print(f"  Device:  {DEVICE} (FP16: {USE_FP16})", flush=True)
+    print("=" * 70, flush=True)
 
     # 1. Load book metadata
     meta = load_book_metadata(DB_FILE)
     all_book_ids = sorted(list(meta["book_texts"].keys()))
-    print(f"Total catalog books: {len(all_book_ids):,}")
+    print(f"Total catalog books: {len(all_book_ids):,}", flush=True)
 
     # 2. Load fine-tuned Arctic model
-    print(f"\nLoading fine-tuned model from {model_path}...")
+    print(f"\nLoading fine-tuned model from {model_path}...", flush=True)
     model = SentenceTransformer(str(model_path), device=DEVICE)
     if USE_FP16 and DEVICE == "cuda":
         model.half()
@@ -244,10 +252,10 @@ def main():
         cycle_num=args.cycle
     )
 
-    print("\n" + "=" * 70)
-    print(f"  CYCLE {args.cycle} MINING COMPLETED SUCCESSFULLY!")
-    print(f"  Output Dataset: {output_path}")
-    print("=" * 70)
+    print("\n" + "=" * 70, flush=True)
+    print(f"  CYCLE {args.cycle} MINING COMPLETED SUCCESSFULLY!", flush=True)
+    print(f"  Output Dataset: {output_path}", flush=True)
+    print("=" * 70, flush=True)
 
 if __name__ == "__main__":
     main()
