@@ -12,9 +12,9 @@
 * **Primary Catalog**: 64,552 Goodreads books (structured by Title, Authors, Genres, Description)
 * **Final Deliverables**:
   1. Fine-tuned high-performance book retriever outperforming baseline.
-  2. Multi-cycle iterative hard negative mining pipeline.
-  3. Model published to Hugging Face Hub with complete metadata & model card.
-  4. Comprehensive MkDocs technical documentation site ready for GitHub Pages.
+  2. Multi-cycle iterative hard negative mining pipeline with 8-layer false-negative shield.
+  3. Production-ready local model checkpoints with automated fast vector evaluation.
+  4. Comprehensive MkDocs technical documentation site ready for local and web presentation.
 
 ---
 
@@ -43,9 +43,8 @@
 | **3b** | **Fine-Tuning Cycle 1** | ✅ **COMPLETE** | `arctic_output/arctic_v2/best_model` | Test: R@1: 35.60%, R@10: 73.96%, R@50: 84.66% (+18.6% R@10) |
 | **3c** | **Iterative Negative Mining (Cycle 2)**| ✅ **COMPLETE** | `data/train_arctic_v3.jsonl` | 179,319 pairs mined; 1.44M false negatives shielded |
 | **3d** | **Fine-Tuning Cycle 2** | 🚀 **IN PROGRESS** | `arctic_output/arctic_v3/best_model` | Training on 179,319 Cycle 2 adversarial pairs (Top-5 negs) |
-| **4** | **Final Benchmarking & Comparison** | ⏳ **PENDING** | `results/final_comparison.json` | Side-by-side progression table |
-| **5** | **Hugging Face Hub Model Publication**| ⏳ **PENDING** | Hugging Face Repository | Automatic upload script with full model card |
-| **6** | **MkDocs Build & GitHub Pages Prep** | ⏳ **PENDING** | `site/` | Complete static HTML documentation site |
+| **4** | **Final Benchmarking & Progression Comparison** | ⏳ **PENDING** | `results/final_comparison.json` | Complete progression across Baseline, Phase 1, Cycle 1, and Cycle 2 |
+| **5** | **Documentation Build & Site Finalization** | ⏳ **PENDING** | `site/` | Fully audited MkDocs documentation |
 
 ---
 

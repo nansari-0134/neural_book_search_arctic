@@ -50,4 +50,4 @@ graph TD
 * [Contrastive Fine-Tuning](fine_tuning.md): MNRL loss, duplicate-aware masking, and learning schedules.
 * [Iterative Negative Mining](iterative_mining.md): Multi-cycle mining and the 8-layer defense shield.
 * [Benchmark Progression](benchmarks.md): Comprehensive results progression table.
-* [Hugging Face Deployment](huggingface.md): Publishing models to Hugging Face Hub.
+* [Recall@K Metrics Math](metrics_explanation.md): 2D block-chunking algorithm and exact evaluation math.
