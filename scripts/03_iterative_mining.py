@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import (
-    TRAIN_FILE, VAL_FILE, TEST_FILE, DB_FILE, OUTPUT_DIR, RESULTS_DIR,
+    DATA_DIR, TRAIN_FILE, VAL_FILE, TEST_FILE, DB_FILE, OUTPUT_DIR, RESULTS_DIR,
     TOP_K_RETRIEVE, MIN_RANK, MAX_RANK, NEW_NEGS_TO_ADD, OLD_NEGS_TO_KEEP,
     MAX_NEG_FREQUENCY, EASY_PAIR_KEEP_RATIO, QUERY_INSTRUCTION, DEVICE, USE_FP16
 )
@@ -197,5 +197,58 @@ def mine_dataset(
 
     print(f"Saved {len(output_rows):,} pairs to {output_file.name}")
 
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Mine hard negatives using fine-tuned Arctic model")
+    parser.add_argument("--model-dir", default=str(OUTPUT_DIR / "arctic_phase1" / "best_model"), help="Path to fine-tuned model")
+    parser.add_argument("--input-file", default=str(TRAIN_FILE), help="Input JSONL file")
+    parser.add_argument("--output-file", default=str(DATA_DIR / "train_arctic_v2.jsonl"), help="Output JSONL file")
+    parser.add_argument("--cycle", type=int, default=1, help="Mining cycle number")
+    args = parser.parse_args()
+
+    model_path = Path(args.model_dir)
+    input_path = Path(args.input_file)
+    output_path = Path(args.output_file)
+
+    print("=" * 70)
+    print(f"  STEP 3a: HARD NEGATIVE MINING (CYCLE {args.cycle})")
+    print(f"  Model:   {model_path}")
+    print(f"  Input:   {input_path.name}")
+    print(f"  Output:  {output_path.name}")
+    print(f"  Device:  {DEVICE} (FP16: {USE_FP16})")
+    print("=" * 70)
+
+    # 1. Load book metadata
+    meta = load_book_metadata(DB_FILE)
+    all_book_ids = sorted(list(meta["book_texts"].keys()))
+    print(f"Total catalog books: {len(all_book_ids):,}")
+
+    # 2. Load fine-tuned Arctic model
+    print(f"\nLoading fine-tuned model from {model_path}...")
+    model = SentenceTransformer(str(model_path), device=DEVICE)
+    if USE_FP16 and DEVICE == "cuda":
+        model.half()
+    model.eval()
+
+    # 3. Pre-encode catalog
+    catalog_emb = encode_catalog(model, meta, all_book_ids)
+
+    # 4. Mine hard negatives
+    mine_dataset(
+        model=model,
+        catalog_embeddings=catalog_emb,
+        all_book_ids=all_book_ids,
+        meta=meta,
+        input_file=input_path,
+        output_file=output_path,
+        cycle_num=args.cycle
+    )
+
+    print("\n" + "=" * 70)
+    print(f"  CYCLE {args.cycle} MINING COMPLETED SUCCESSFULLY!")
+    print(f"  Output Dataset: {output_path}")
+    print("=" * 70)
+
 if __name__ == "__main__":
-    print("Iterative mining script loaded. Ready for pipeline invocation.")
+    main()
+
