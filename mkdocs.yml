@@ -1,5 +1,5 @@
-site_name: Neural Book Search (Snowflake Arctic)
-site_description: Production-grade dense book retrieval with Snowflake Arctic Embed (v1.5), contrastive learning, and iterative negative mining.
+site_name: "ArcticDense: Neural Book Retriever"
+site_description: "Production-grade dense vector book retrieval with Snowflake Arctic Embed (v1.5), contrastive learning, and iterative negative mining."
 site_author: Nizam
 repo_name: KanishShandilya/neural_book_search_arctic
 repo_url: https://github.com/KanishShandilya/neural_book_search_arctic

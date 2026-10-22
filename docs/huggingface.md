@@ -15,7 +15,7 @@ $env:HF_TOKEN = "your_hugging_face_write_token"
 ## 2. Publishing the Model
 Run the automated upload script from the project root:
 ```bash
-python scripts/05_upload_to_hf.py --repo-id your_username/snowflake-arctic-book-retriever
+python scripts/05_upload_to_hf.py --repo-id your_username/arcticdense-book-retriever
 ```
 
 ### Automated Actions:
@@ -33,7 +33,7 @@ Once published, anyone can load and use your fine-tuned model via standard `sent
 ```python
 from sentence_transformers import SentenceTransformer
 
-model = SentenceTransformer("your_username/snowflake-arctic-book-retriever")
+model = SentenceTransformer("your_username/arcticdense-book-retriever")
 
 # Encode catalog book
 book_emb = model.encode("Title: Dune | Genres: sci-fi | Description: Desert planet...")

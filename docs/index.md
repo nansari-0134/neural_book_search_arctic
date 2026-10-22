@@ -1,6 +1,6 @@
-# ❄️ Neural Book Search with Snowflake Arctic Embed (v1.5)
+# ❄️ ArcticDense: Neural Book Retriever
 
-Welcome to the technical documentation for **Neural Book Search**, an end-to-end dense retrieval and trope-based search engine fine-tuned across **64,552 Goodreads books**.
+Welcome to the technical documentation for **ArcticDense: Neural Book Retriever**, an end-to-end dense vector retrieval engine fine-tuned across **64,552 Goodreads books** using **Snowflake Arctic Embed (v1.5)**.
 
 ---
 
