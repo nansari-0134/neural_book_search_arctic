@@ -13,14 +13,15 @@ graph LR
         B10["R@10: 55.40%"]
         B50["R@50: 69.57%"]
     end
-    subgraph Phase1 ["Phase 1 Fine-Tuned (MNRL)"]
+    subgraph Phase1 ["Phase 1 (In-Batch Negs)"]
         P1["R@1: 29.16% (+7.49%)"]
         P10["R@10: 64.67% (+9.27%)"]
         P50["R@50: 78.20% (+8.63%)"]
     end
-    subgraph Cycle1 ["Cycle 1 Mined (Upcoming)"]
-        C1["Target R@1: 34%+"]
-        C10["Target R@10: 70%+"]
+    subgraph Cycle1 ["Cycle 1 (Top-5 Hard Negs)"]
+        C1["R@1: 35.60% (+13.93%)"]
+        C10["R@10: 73.96% (+18.56%)"]
+        C50["R@50: 84.66% (+15.09%)"]
     end
     Baseline --> Phase1 --> Cycle1
 ```
@@ -37,10 +38,11 @@ All evaluations search across the **entire 64,552-book catalog** in exact rank o
 | | **BGE-Small Fine-Tuned** *(Prior Ref)* | 21.27% | 53.85% | 60.45% | 74.68% | — |
 | | **Snowflake Arctic Baseline** | **21.67%** | **48.41%** | **55.40%** | **69.57%** | Starting Point |
 | | **Snowflake Arctic Phase 1** | **29.16%** | **58.29%** | **64.67%** | **78.20%** | :rocket: **+7.49% R@1, +9.27% R@10** |
-| | **Snowflake Arctic Cycle 1** | *Pending* | *Pending* | *Pending* | *Pending* | Target: >70% R@10 |
-| | **Snowflake Arctic Cycle 2** | *Pending* | *Pending* | *Pending* | *Pending* | Target: >74% R@10 |
+| | **Snowflake Arctic Cycle 1** | **35.60%** | **68.09%** | **73.96%** | **84.66%** | 🌟 **+13.93% R@1, +18.56% R@10** |
+| | **Snowflake Arctic Cycle 2** | *Pending* | *Pending* | *Pending* | *Pending* | Target: >76% R@10 |
 | **Validation Set**<br>*(32,340 queries)* | **Snowflake Arctic Baseline** | **22.24%** | **49.02%** | **55.43%** | **69.41%** | Starting Point |
 | | **Snowflake Arctic Phase 1** | **29.86%** | **59.55%** | **65.70%** | **78.36%** | :rocket: **+7.62% R@1, +10.27% R@10** |
+| | **Snowflake Arctic Cycle 1** | **36.01%** | **68.78%** | **74.41%** | **84.84%** | 🌟 **+13.77% R@1, +18.98% R@10** |
 
 ---
 
@@ -70,6 +72,21 @@ The Phase 1 contrastive fine-tuning was executed on a single consumer laptop GPU
 | **100.0%** | Step 16,141 / 16,141 | **0.6073** | $0.00$ | 761.2 min (12.7h) |
 
 ---
+
+## ⚡ Cycle 1 Training Telemetry (Adversarial Hard Negatives)
+
+Cycle 1 fine-tuning introduced **5 actively mined hard negatives per query** (199,808 adversarial pairs) and was trained with sub-batch negative chunking and non-reentrant gradient checkpointing:
+
+| Hyperparameter / Metric | Observed Value | Description |
+| :--- | :--- | :--- |
+| **Dataset Size** | **199,808 pairs** | 5 adversarial hard negatives mined from 64,552 books |
+| **Micro-Batch / Grad Accum** | **Batch 4 / Accum 8** | Effective batch size: 32 (exact gradient preservation) |
+| **Total Micro-Steps** | **49,952 micro-steps** | 6,244 full optimizer steps |
+| **Negative Chunking** | **Chunk Size: 12** | Prevents WDDM PCIe paging thrash |
+| **Execution Time** | **416.7 minutes (~6.9 hours)** | Average step latency: **0.49 seconds** (vs 26.3s unoptimized) |
+| **VRAM Footprint** | **2,835 – 3,429 MiB** | Stable 55% utilization on RTX 4050 6GB |
+| **Thermal & Power** | **74–77°C sustained** | Stable power draw: 73W – 76W (100% compute bound) |
+| **Final Loss** | **`1.4070` $\rightarrow$ `0.5841`** | Strong convergence on adversarial pairs |
 
 ## 🎯 Evaluation Protocol & Recall Math
 
