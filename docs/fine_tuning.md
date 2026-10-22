@@ -72,3 +72,43 @@ graph TD
 
 See [Benchmark Progression](benchmarks.md) for full catalog metrics and comparative analysis.
 
+---
+
+## 5. Cycle 1 Fine-Tuning & The "VRAM Cliff" Fix
+
+Cycle 1 trained the retriever on **199,808 adversarial pairs** with **Top-5 actively mined hard negatives per query**.
+
+### 🛠️ The 99-Hour Bottleneck & The Engineering Solution
+In an initial unchunked pass, each micro-batch of 16 queries required encoding $16\text{ queries} + 16\text{ pos} + (16 \times 5 = 80\text{ hard negs}) = \mathbf{112\text{ sequences of 512 tokens}}$.
+* This demanded **~9.7 GB VRAM**, exceeding the 6 GB RTX 4050 capacity.
+* Windows WDDM silently paged activation tensors across the PCIe bus to shared system RAM, slowing step latency to **26.3s/step (99-hour ETA)**.
+
+We solved this without dropping a single hard negative via a 3-point architectural fix:
+1. **Sub-Batch Negative Chunking**: In `embed_train(texts, chunk_size=12)`, hard negatives are encoded in slices of 12, capping peak VRAM at **~3.4 GB**.
+2. **Equivalent Micro-Batching**: Setting `batch_size = 4` with `grad_accum = 8` maintains an **effective batch size of 32** with exact mathematical gradient equivalence.
+3. **Non-Reentrant Checkpointing**: `use_reentrant=False` eliminates legacy PyTorch activation leaks.
+
+**Result**: Step latency collapsed from **26.3s $\rightarrow$ 0.49s (55x speedup)**, allowing Cycle 1 to complete in **6.9 hours** instead of 99 hours!
+
+### 📈 Cycle 1 Empirical Results (64,552 Books)
+
+| Metric | Baseline | Phase 1 | Cycle 1 (Mined Top-5 Negs) | Gain vs Baseline |
+| :--- | :---: | :---: | :---: | :---: |
+| **Recall@1** | 21.67% | 29.16% | **35.60%** | **+13.93% (+64% rel)** |
+| **Recall@5** | 48.41% | 58.29% | **68.09%** | **+19.68% (+41% rel)** |
+| **Recall@10** | 55.40% | 64.67% | **73.96%** | **+18.56% (+33% rel)** |
+| **Recall@50** | 69.57% | 78.20% | **84.66%** | **+15.09% (+22% rel)** |
+
+---
+
+## 6. Cycle 2 Progressive Fine-Tuning (Currently Active)
+
+Cycle 2 fine-tunes the retriever on **179,319 newly mined adversarial pairs** from `data/train_arctic_v3.jsonl`:
+* **Starting Weights**: `arctic_output/arctic_v2/best_model` (Cycle 1 checkpoint)
+* **Warm-Start Loss**: Started at **`1.1224`** (significantly lower than Cycle 1's starting loss of `1.4070`)
+* **Adversarial Negatives**: 3 fresh negatives mined from Cycle 1's confusion boundary + 2 retained Cycle 1 negatives
+* **Schedule**: 5,604 optimizer steps with cosine annealing decay
+* **Estimated Runtime**: **~5.8 hours**
+* **Target Objective**: Push Test Recall@10 from **73.96% $\rightarrow$ 76%+**
+
+

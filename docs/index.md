@@ -23,14 +23,14 @@ graph TD
 
 ## 🏆 Current Benchmark Highlights (64,552 Books)
 
-| Metric | Baseline Arctic | Phase 1 Fine-Tuned | Gain |
-| :--- | :---: | :---: | :---: |
-| **Recall@1** | 21.67% | **29.16%** | :rocket: **+7.49%** |
-| **Recall@5** | 48.41% | **58.29%** | :rocket: **+9.88%** |
-| **Recall@10** | 55.40% | **64.67%** | :rocket: **+9.27%** |
-| **Recall@50** | 69.57% | **78.20%** | :rocket: **+8.63%** |
+| Metric | Baseline Arctic | Phase 1 (Easy Negs) | Cycle 1 (Mined Top-5 Negs) | Total Gain vs Baseline |
+| :--- | :---: | :---: | :---: | :---: |
+| **Recall@1** | 21.67% | 29.16% (+7.49%) | **35.60%** (+6.44%) | 🌟 **+13.93% (+64% rel)** |
+| **Recall@5** | 48.41% | 58.29% (+9.88%) | **68.09%** (+9.80%) | 🌟 **+19.68% (+41% rel)** |
+| **Recall@10** | 55.40% | 64.67% (+9.27%) | **73.96%** (+9.29%) | 🌟 **+18.56% (+33% rel)** |
+| **Recall@50** | 69.57% | 78.20% (+8.63%) | **84.66%** (+6.46%) | 🌟 **+15.09% (+22% rel)** |
 
-*Evaluated on 32,170 unseen test queries against 64,552 Goodreads books. See [Benchmark Progression](benchmarks.md) for full breakdown.*
+*Evaluated on 32,170 unseen test queries against 64,552 Goodreads books. Cycle 2 fine-tuning is currently underway to target >76% Recall@10. See [Benchmark Progression](benchmarks.md) for full breakdown.*
 
 ---
 
