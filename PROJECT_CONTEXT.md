@@ -3,7 +3,7 @@
 ## 1. Project Overview & Objectives
 * **Project Name**: ArcticDense: Neural Book Retriever (Snowflake Arctic Embed v1.5)
 * **Directory**: `neural_book_search_arctic/`
-* **Author / Git Identity**: Nizam (`nansari.0134@gmail.com`)
+* **Author / Git Identity**: Nizam (`nansari.0134@gmail.com`) | GitHub: [https://github.com/nansari-0134/](https://github.com/nansari-0134/)
 * **Primary Target Model**: `Snowflake/snowflake-arctic-embed-m-v1.5`
   * Architecture: Arctic Transformer (108.9M Parameters)
   * Context Window: 512 tokens

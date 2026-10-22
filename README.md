@@ -161,5 +161,5 @@ python scripts/03_iterative_mining.py
 ---
 
 ## 👤 Author
-**Nizam**  
-GitHub: [https://github.com/KanishShandilya](https://github.com/KanishShandilya)
+**Nizam** (`nansari.0134@gmail.com`)  
+GitHub: [https://github.com/nansari-0134/](https://github.com/nansari-0134/)

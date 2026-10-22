@@ -95,7 +95,7 @@ embs_256 = embs_256 / np.linalg.norm(embs_256, axis=1, keepdims=True)
 ```
 
 ## 👤 Author
-Developed and fine-tuned by **Nizam** (`nansari.0134@gmail.com`).
+Developed and fine-tuned by **Nizam** (`nansari.0134@gmail.com` | [GitHub](https://github.com/nansari-0134/)).
 """
 
 def main():
