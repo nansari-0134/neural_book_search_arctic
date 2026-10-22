@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import (
-    MODEL_NAME, TRAIN_FILE, VAL_FILE, DB_FILE, OUTPUT_DIR, RESULTS_DIR,
+    MODEL_NAME, TRAIN_FILE, VAL_FILE, TEST_FILE, DB_FILE, OUTPUT_DIR, RESULTS_DIR,
     BATCH_SIZE, GRAD_ACCUM_STEPS, LEARNING_RATE, WARMUP_RATIO, TEMPERATURE,
     WEIGHT_DECAY, SEED, MAX_SEQ_LENGTH, DEVICE, USE_FP16, QUERY_INSTRUCTION
 )
@@ -52,28 +52,36 @@ def main():
     cache_dir = phase1_dir / "datasets_cache"
     phase1_dir.mkdir(parents=True, exist_ok=True)
 
-    # 2. Build streaming training dataset
-    def data_generator():
-        with open(TRAIN_FILE, "r", encoding="utf-8") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                row = json.loads(line)
-                neg_ids = row.get("negative_ids", [])
-                neg_texts = [meta["book_texts"].get(nid, "Untitled") for nid in neg_ids]
-                if not neg_texts:
-                    neg_texts = [meta["book_texts"].get(str(row["positive_id"]), "Untitled")]
-                yield {
-                    "anchor": QUERY_INSTRUCTION + row["query"],
-                    "positive": meta["book_texts"].get(str(row["positive_id"]), "Untitled"),
-                    "positive_id": str(row["positive_id"]),
-                    "negatives": neg_texts,
-                }
+    # 2. Build fast in-memory PyTorch training dataset (Bypasses Windows MAX_PATH limits)
+    class BookSearchDataset(torch.utils.data.Dataset):
+        def __init__(self, data_path, book_meta):
+            print(f"Loading training rows into memory from {Path(data_path).name}...")
+            self.rows = []
+            with open(data_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        self.rows.append(json.loads(line))
+            self.book_meta = book_meta
+            print(f"Dataset ready: {len(self.rows):,} training pairs.")
 
-    print("Building streaming training dataset from train.jsonl...")
-    train_dataset = Dataset.from_generator(data_generator, cache_dir=str(cache_dir))
+        def __len__(self):
+            return len(self.rows)
+
+        def __getitem__(self, idx):
+            row = self.rows[idx]
+            neg_ids = row.get("negative_ids", [])
+            neg_texts = [self.book_meta["book_texts"].get(nid, "Untitled") for nid in neg_ids]
+            if not neg_texts:
+                neg_texts = [self.book_meta["book_texts"].get(str(row["positive_id"]), "Untitled")]
+            return {
+                "anchor": QUERY_INSTRUCTION + row["query"],
+                "positive": self.book_meta["book_texts"].get(str(row["positive_id"]), "Untitled"),
+                "positive_id": str(row["positive_id"]),
+                "negatives": neg_texts,
+            }
+
+    train_dataset = BookSearchDataset(TRAIN_FILE, meta)
     n_train = len(train_dataset)
-    print(f"Dataset ready: {n_train:,} training pairs.")
 
     # 3. Load model with gradient checkpointing
     print(f"\nLoading model: {MODEL_NAME}...")
@@ -229,14 +237,14 @@ def main():
                 optimizer.zero_grad(set_to_none=True)
             scheduler.step()
 
-        if (step_idx + 1) % 100 == 0 or (step_idx + 1) == n_steps:
+        if (step_idx + 1) % 50 == 0 or (step_idx + 1) == n_steps:
             elapsed = time.time() - started
             steps_done = step_idx + 1 - start_step
             eta_sec = ((elapsed / max(1, steps_done)) * (n_steps - (step_idx + 1)))
             eta_str = f"{int(eta_sec // 3600)}h {int((eta_sec % 3600) // 60)}m" if eta_sec >= 3600 else f"{int(eta_sec // 60)}m {int(eta_sec % 60)}s"
             pct = (step_idx + 1) / n_steps * 100
             cur_lr = scheduler.get_last_lr()[0]
-            print(f"Step {step_idx + 1:,}/{n_steps:,} [{pct:5.1f}%] | Loss: {total_loss / (step_idx + 1):.4f} | LR: {cur_lr:.2e} | Elapsed: {elapsed/60:.1f}m | ETA: {eta_str}")
+            print(f"Step {step_idx + 1:,}/{n_steps:,} [{pct:5.1f}%] | Loss: {total_loss / (step_idx + 1):.4f} | LR: {cur_lr:.2e} | Elapsed: {elapsed/60:.1f}m | ETA: {eta_str}", flush=True)
 
         del q, pos_emb, candidates, logits, labels, loss
         if neg_emb is not None:
