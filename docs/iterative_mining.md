@@ -70,3 +70,36 @@ The 8-layer shield successfully blocked **over 1.8 million toxic candidates** fr
 | **`cand_series_in_pos_title`** | **1,939** | Blocked target series title mentions in candidate name |
 | **Total Shielded Blocks** | **1,805,229** | **Guaranteed clean, high-precision contrastive gradients** |
 
+---
+
+## 4. Cycle 2 Empirical Mining Results
+
+Cycle 2 mining was executed against the **Cycle 1 fine-tuned model** (`arctic_output/arctic_v2/best_model`, R@10 = 73.96%) across the full 64,552 book catalog:
+
+| Metric | Result | Description |
+| :--- | :--- | :--- |
+| **Catalog Scope** | **64,552 books** | Pre-encoded with Cycle 1 weights into 768-d vectors on GPU (FP16) |
+| **Input Queries** | **199,808 queries** | Adversarial pool from Cycle 1 |
+| **Downsampled Easy Pairs** | **20,489 (10.3%)** | Pairs solved at rank #0 downsampled to focus on tough confusions |
+| **Final Mined Dataset** | **179,319 pairs** | Saved to `data/train_arctic_v3.jsonl` (90.0 MB) |
+| **Negative Composition** | **3 Fresh + 2 Retained = 5** | 3 ultra-hard negatives from Cycle 2 + 2 retained from Cycle 1 |
+| **Mining Speed** | **1.5 minutes** | High-throughput GPU matrix dot-product + top-k retrieval |
+
+### 🛡️ Cycle 2 Defense Shield Block Breakdown
+
+The 8-layer shield successfully blocked **1,442,395 false-negative candidates** from entering Cycle 2:
+
+| Layer Filter | Blocked Count | Purpose |
+| :--- | :---: | :--- |
+| **`shared_author_shelf`** | **1,346,710** | Prevented penalizing books written by the exact same author |
+| **`banned_id`** | **40,430** | Blocked cross-query identical book references |
+| **`frequency_cap`** | **20,569** | Prevented popular books from over-saturating negatives ($>30$ cap) |
+| **`title_word_overlap`** | **11,827** | Blocked candidates sharing $\ge 65\%$ non-stopwords with target |
+| **`series_match`** | **6,221** | Blocked direct series siblings (e.g. Sequels, Prequels) |
+| **`identical_title`** | **5,862** | Blocked exact title matches |
+| **`base_title_match`** | **5,479** | Blocked alternate edition subtitles and translations |
+| **`series_in_cand_title`** | **2,731** | Blocked series title mentions in candidate book name |
+| **`cand_series_in_pos_title`** | **2,566** | Blocked target series title mentions in candidate name |
+| **Total Shielded Blocks** | **1,442,395** | **Zero gradient contamination on valid works** |
+
+
