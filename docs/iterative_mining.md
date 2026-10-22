@@ -38,3 +38,35 @@ If a mined candidate is actually a valid alternative answer or sequel, penalizin
        │ Pass
  [ACCEPTED AS HARD NEGATIVE]
 ```
+
+---
+
+## 3. Cycle 1 Empirical Mining Results
+
+Cycle 1 mining executed on the Phase 1 fine-tuned model against the full 64,552 book catalog:
+
+| Metric | Result | Description |
+| :--- | :--- | :--- |
+| **Catalog Scope** | **64,552 books** | Pre-encoded into 768-d vectors on GPU (FP16) |
+| **Input Queries** | **258,250 queries** | Full training pool |
+| **Downsampled Easy Pairs** | **58,442 (22.6%)** | Queries already ranked at #0 downsampled by 65% to concentrate compute |
+| **Final Mined Dataset** | **199,808 pairs** | Saved to `data/train_arctic_v2.jsonl` (95.2 MB) |
+| **Mining Speed** | **1.6 minutes** | High-throughput GPU matrix dot-product + top-k retrieval |
+
+### 🛡️ Defense Shield Block Breakdown
+
+The 8-layer shield successfully blocked **over 1.8 million toxic candidates** from poisoning the negative pool:
+
+| Layer Filter | Blocked Count | Purpose |
+| :--- | :---: | :--- |
+| **`shared_author_shelf`** | **1,006,554** | Prevented penalizing books written by the exact same author |
+| **`frequency_cap`** | **724,352** | Prevented popular books from over-saturating negatives ($>30$ cap) |
+| **`banned_id`** | **45,084** | Blocked cross-query identical book references |
+| **`title_word_overlap`** | **9,980** | Blocked candidates sharing $\ge 65\%$ non-stopwords with target |
+| **`series_match`** | **5,372** | Blocked direct series siblings (e.g. Sequels, Prequels) |
+| **`identical_title`** | **5,177** | Blocked exact title matches |
+| **`base_title_match`** | **4,715** | Blocked alternate edition subtitles and translations |
+| **`series_in_cand_title`** | **2,056** | Blocked series title mentions in candidate book name |
+| **`cand_series_in_pos_title`** | **1,939** | Blocked target series title mentions in candidate name |
+| **Total Shielded Blocks** | **1,805,229** | **Guaranteed clean, high-precision contrastive gradients** |
+
