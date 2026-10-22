@@ -47,3 +47,28 @@ if len(set(pos_ids)) < len(pos_ids):
 * **Gradient Checkpointing**: Discards forward intermediate activations and recomputes them during backprop, reducing VRAM by ~60%.
 * **Gradient Accumulation**: Micro-batch size 16 accumulated over 2 steps delivers an effective batch size of 32 while using only ~3.2 GB of VRAM.
 * **Atomic Double-Buffered Checkpointing**: Periodically rotates checkpoints (`resume_state.pt` and `.prev`) atomically to withstand system sleep or crashes without corruption.
+
+---
+
+## 4. Phase 1 Execution & Results
+
+Phase 1 fine-tuning completed across all 258,250 training pairs on the NVIDIA RTX 4050 Laptop GPU:
+
+* **Optimizer**: AdamW (`lr=1.5e-5`, weight decay `0.01`)
+* **Schedule**: Linear warmup (807 steps) followed by Cosine Annealing decay
+* **Total Optimizer Steps**: 8,071 steps (16,141 micro-batches)
+* **Training Time**: 761.2 minutes (~12.7 hours)
+* **Loss Convergence**: `1.7508` (Step 50) $\rightarrow$ `0.6073` (Step 16,141)
+
+### Benchmark Summary
+
+```mermaid
+graph TD
+    A[Pretrained Arctic Embed v1.5] -->|Phase 1 Fine-Tuning: 12.7h| B[Phase 1 Arctic Retriever]
+    B --> C["Test Recall@1: 29.16% (+7.49%)"]
+    B --> D["Test Recall@10: 64.67% (+9.27%)"]
+    B --> E["Test Recall@50: 78.20% (+8.63%)"]
+```
+
+See [Benchmark Progression](benchmarks.md) for full catalog metrics and comparative analysis.
+

@@ -21,6 +21,19 @@ graph TD
 
 ---
 
+## 🏆 Current Benchmark Highlights (64,552 Books)
+
+| Metric | Baseline Arctic | Phase 1 Fine-Tuned | Gain |
+| :--- | :---: | :---: | :---: |
+| **Recall@1** | 21.67% | **29.16%** | :rocket: **+7.49%** |
+| **Recall@5** | 48.41% | **58.29%** | :rocket: **+9.88%** |
+| **Recall@10** | 55.40% | **64.67%** | :rocket: **+9.27%** |
+| **Recall@50** | 69.57% | **78.20%** | :rocket: **+8.63%** |
+
+*Evaluated on 32,170 unseen test queries against 64,552 Goodreads books. See [Benchmark Progression](benchmarks.md) for full breakdown.*
+
+---
+
 ## 🔑 Key Features
 * **State-of-the-Art Transformer**: Built on `snowflake-arctic-embed-m-v1.5`, holding the #1 spot on MTEB Retrieval benchmarks for its size class.
 * **Full Context Handling**: 512 tokens sequence length, capturing entire book synopses, genre tags, and series notes without lossy truncation.
