@@ -37,11 +37,37 @@ graph TD
 ### Why Bi-Encoder for Catalog Retrieval?
 * **Offline Pre-computation**: All 64,552 catalog book descriptions are encoded offline once and cached.
 * **Blazing Fast Query Search**: At search time, only the user query is encoded (~3ms on GPU). The search is reduced to a matrix-vector dot product against pre-computed vectors ($< 2\text{ms}$).
-* **Total Latency**: $< 15\text{ms}$ over 64,552 books.
+* **High Candidate Recall**: Filters the entire 64,552-book catalog down to the top 50 candidates in $< 15\text{ms}$ with **85.51% Recall@50**.
 
 ---
 
-## 2. Asymmetric Instruction Tuning
+## 2. Two-Stage Retrieval Paradigm: Bi-Encoder + Cross-Encoder
+
+In modern neural information retrieval, a single model cannot optimize both sub-15ms latency across tens of thousands of items and deep token-to-token semantic understanding. ArcticDense adopts the **Two-Stage Cascade Architecture**:
+
+```mermaid
+graph LR
+    Catalog["64,552 Catalog Books"] --> Stage1["Stage 1: Arctic Bi-Encoder<br>(MIPS Cosine Search)"]
+    Stage1 -->|15 ms (Recall@50: 85.51%)| Candidates["Top-50 Candidate Books"]
+    Candidates --> Stage2["Stage 2: Cross-Encoder Reranker<br>(Joint Multi-Head Attention)"]
+    Stage2 -->|45 ms (Target Recall@1: 55-65%+)| PrecisionRank["Top-10 Precision Ranked Books"]
+```
+
+### Architectural Comparison
+
+| Dimension | Stage 1: Arctic Bi-Encoder | Stage 2: Cross-Encoder Reranker |
+| :--- | :--- | :--- |
+| **Input Format** | $E(q)$ and $E(d)$ independently | `[CLS] Query [SEP] Book Description [SEP]` |
+| **Attention Mechanism** | Intra-sequence only (no cross-attention) | **Full All-to-All Cross-Attention** across all tokens |
+| **Scoring Function** | Dot Product $\mathbf{q} \cdot \mathbf{d}$ | Multi-layer Perceptron head: $\sigma(W h_{\text{CLS}} + b)$ |
+| **Search Scope** | Entire Catalog (**64,552 books**) | Top Candidates (**50 books**) |
+| **Primary Objective** | **High Candidate Recall** (85.51% Recall@50) | **High Top-1 Precision** & Nuance Disambiguation |
+| **Execution Latency** | **~12–15 ms** on GPU | **~40–50 ms** on GPU |
+
+---
+
+## 3. Asymmetric Instruction Tuning
+
 
 Unlike symmetric sentence-similarity transformers, `Snowflake/snowflake-arctic-embed-m-v1.5` employs asymmetric instruction conditioning. Queries and documents occupy different distribution spaces; an explicit prompt aligns the query's latent representation with document passages:
 
@@ -58,7 +84,7 @@ This prompt guides the cross-attention mechanism to position queries into the ap
 
 ---
 
-## 3. Matryoshka Representation Learning (MRL)
+## 4. Matryoshka Representation Learning (MRL)
 
 Snowflake Arctic natively incorporates **Matryoshka Representation Learning**. During contrastive pre-training and fine-tuning, loss gradients are applied across multiple nested sub-vector dimensions simultaneously:
 
@@ -84,7 +110,7 @@ In empirical benchmarks, truncating vectors from **768-d down to 256-d** reduces
 
 ---
 
-## 4. Finished Product Web Application Architecture
+## 5. Finished Product Web Application Architecture
 
 The complete system includes a full-stack, production-ready web application (`app/`) allowing users to interact with the fine-tuned champion model:
 
