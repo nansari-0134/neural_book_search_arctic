@@ -1,5 +1,6 @@
 {
-  "model": "arctic_cycle2",
+  "stage": "progressive_refinement",
+  "description": "Progressive Adversarial Refinement - Champion Model (179,319 pairs, 3 fresh + 2 retained hard negatives)",
   "timestamp": "2026-10-23 06:52:18",
   "validation": {
     "R@1": 0.3639146567717996,

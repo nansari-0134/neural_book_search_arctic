@@ -67,3 +67,6 @@ Thumbs.db
 *.log
 scratch/
 site/
+.cache/
+*/.cache/
+*.cache

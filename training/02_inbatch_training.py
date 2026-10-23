@@ -1,5 +1,5 @@
 """
-Step 2: Phase 1 Fine-Tuning of Snowflake Arctic Embed (v1.5)
+Step 2: In-Batch Contrastive Training of Snowflake Arctic Embed (v1.5)
 Contrastive Multiple Negatives Ranking Loss (MNRL) with Duplicate-Positive Masking
 """
 import sys
@@ -37,7 +37,7 @@ if torch.cuda.is_available():
 
 def main():
     print("=" * 70)
-    print("  STEP 2: PHASE 1 FINE-TUNING (SNOWFLAKE ARCTIC EMBED)")
+    print("  STEP 2: IN-BATCH CONTRASTIVE TRAINING (SNOWFLAKE ARCTIC EMBED)")
     print(f"  Model:   {MODEL_NAME}")
     print(f"  Device:  {DEVICE} (FP16: {USE_FP16})")
     print(f"  Output:  {OUTPUT_DIR}")
@@ -184,7 +184,7 @@ def main():
     optimizer.zero_grad(set_to_none=True)
     started = last_save = time.time()
 
-    print("\nStarting Phase 1 Training Loop...")
+    print("\nStarting In-Batch Contrastive Training Loop...")
     for step_idx, batch in enumerate(loader, start=start_step):
         group_start = (step_idx // GRAD_ACCUM_STEPS) * GRAD_ACCUM_STEPS
         group_size = min(GRAD_ACCUM_STEPS, n_steps - group_start)
@@ -262,15 +262,16 @@ def main():
     print("Model saved successfully.")
 
     # Validation
-    val_metrics = evaluate_recall(model, VAL_FILE, "Phase 1 Validation", meta, all_book_ids)
-    test_metrics = evaluate_recall(model, TEST_FILE, "Phase 1 Test", meta, all_book_ids)
+    val_metrics = evaluate_recall(model, VAL_FILE, "In-Batch Contrastive Validation", meta, all_book_ids)
+    test_metrics = evaluate_recall(model, TEST_FILE, "In-Batch Contrastive Test", meta, all_book_ids)
 
     results_payload = {
-        "model": "arctic_phase1",
+        "stage": "inbatch_contrastive",
+        "description": "In-Batch Contrastive Fine-Tuning (258,250 pairs)",
         "validation": val_metrics,
         "test": test_metrics
     }
-    with open(RESULTS_DIR / "phase1_metrics.json", "w", encoding="utf-8") as f:
+    with open(RESULTS_DIR / "inbatch_contrastive_metrics.json", "w", encoding="utf-8") as f:
         json.dump(results_payload, f, indent=2)
 
 if __name__ == "__main__":

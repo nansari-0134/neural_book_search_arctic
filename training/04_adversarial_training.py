@@ -1,6 +1,7 @@
 """
-Step 3b: Multi-Cycle Contrastive Fine-Tuning of Snowflake Arctic Embed (v1.5)
-Trains progressive cycles with newly mined hard negatives and 8-layer shield protection.
+Step 4: Adversarial Hard-Negative Contrastive Fine-Tuning of Snowflake Arctic Embed (v1.5)
+Trains contrastive retriever using mined adversarial hard negatives and 8-layer shield protection.
+Employs sub-batch negative chunking and gradient checkpointing for 6GB VRAM stability.
 """
 import sys
 import os
@@ -36,11 +37,12 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(SEED)
 
 def main():
-    parser = argparse.ArgumentParser(description="Multi-cycle fine-tuning of Snowflake Arctic retriever")
+    parser = argparse.ArgumentParser(description="Adversarial hard-negative fine-tuning of Snowflake Arctic retriever")
     parser.add_argument("--train-file", default=str(DATA_DIR / "train_arctic_v2.jsonl"), help="Training JSONL file with mined negatives")
     parser.add_argument("--base-model", default=str(OUTPUT_DIR / "arctic_phase1" / "best_model"), help="Base model checkpoint to resume/fine-tune from")
     parser.add_argument("--output-dir", default=str(OUTPUT_DIR / "arctic_v2"), help="Output directory for fine-tuned model and checkpoints")
-    parser.add_argument("--cycle", type=int, default=1, help="Cycle number")
+    parser.add_argument("--stage", choices=["targeted_hard_negatives", "progressive_refinement"], default="targeted_hard_negatives", help="Fine-tuning stage")
+    parser.add_argument("--stage-name", default="Targeted Hard-Negative Training", help="Human-readable stage title")
     parser.add_argument("--lr", type=float, default=LEARNING_RATE, help="Learning rate")
     parser.add_argument("--batch-size", type=int, default=4, help="Micro-batch size (queries per micro-batch)")
     parser.add_argument("--grad-accum", type=int, default=8, help="Gradient accumulation steps (effective batch size = batch_size * grad_accum)")
@@ -52,15 +54,15 @@ def main():
 
     train_path = Path(args.train_file)
     base_model_path = Path(args.base_model)
-    cycle_dir = Path(args.output_dir)
-    best_model_dir = cycle_dir / "best_model"
-    cycle_dir.mkdir(parents=True, exist_ok=True)
+    stage_dir = Path(args.output_dir)
+    best_model_dir = stage_dir / "best_model"
+    stage_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 70, flush=True)
-    print(f"  STEP 3: FINE-TUNING CYCLE {args.cycle} (SNOWFLAKE ARCTIC EMBED)", flush=True)
+    print(f"  STEP 4: {args.stage_name.upper()} (SNOWFLAKE ARCTIC EMBED)", flush=True)
     print(f"  Base Model: {base_model_path}", flush=True)
     print(f"  Train Data: {train_path.name}", flush=True)
-    print(f"  Output Dir: {cycle_dir}", flush=True)
+    print(f"  Output Dir: {stage_dir}", flush=True)
     print(f"  Device:     {DEVICE} (FP16: {USE_FP16})", flush=True)
     print(f"  LR:         {args.lr:.2e}", flush=True)
     print(f"  Micro-Batch:{BATCH_SIZE} | Grad Accum: {GRAD_ACCUM_STEPS} | Effective Batch: {EFFECTIVE_BATCH_SIZE}", flush=True)
@@ -304,20 +306,21 @@ def main():
         show_progress_bar=True
     ).astype("float32")
 
-    val_metrics = evaluate_recall(model, VAL_FILE, f"Cycle {args.cycle} Validation", meta, all_book_ids, cached_catalog_emb=catalog_emb)
-    test_metrics = evaluate_recall(model, TEST_FILE, f"Cycle {args.cycle} Test", meta, all_book_ids, cached_catalog_emb=catalog_emb)
+    val_metrics = evaluate_recall(model, VAL_FILE, f"{args.stage_name} Validation", meta, all_book_ids, cached_catalog_emb=catalog_emb)
+    test_metrics = evaluate_recall(model, TEST_FILE, f"{args.stage_name} Test", meta, all_book_ids, cached_catalog_emb=catalog_emb)
 
     results_payload = {
-        "model": f"arctic_cycle{args.cycle}",
+        "stage": args.stage,
+        "description": args.stage_name,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "validation": val_metrics,
         "test": test_metrics
     }
-    metrics_file = RESULTS_DIR / f"cycle{args.cycle}_metrics.json"
+    metrics_file = RESULTS_DIR / f"{args.stage}_metrics.json"
     with open(metrics_file, "w", encoding="utf-8") as f:
         json.dump(results_payload, f, indent=2)
 
-    print(f"\n[Done] Cycle {args.cycle} benchmark saved to {metrics_file.name}")
+    print(f"\n[Done] {args.stage_name} benchmark saved to {metrics_file.name}")
 
 if __name__ == "__main__":
     main()

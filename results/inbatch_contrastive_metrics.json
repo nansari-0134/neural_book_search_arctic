@@ -1,5 +1,6 @@
 {
-  "model": "arctic_phase1",
+  "stage": "inbatch_contrastive",
+  "description": "In-Batch Contrastive Training (258,250 synthetic pairs)",
   "timestamp": "2026-10-22 11:03:38",
   "validation": {
     "R@1": 0.29863945578231293,

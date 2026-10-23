@@ -120,4 +120,4 @@ metrics = {f"R@{k}": float(np.mean(np.asarray(ranks) < k)) for k in (1, 5, 10, 5
 * `ranks < k` returns `True` if the rank is strictly less than $K$ (e.g., for $K=10$, ranks 0 to 9 are `True`).
 * `np.mean(...)` computes the proportion of `True` queries over all 32,170 test queries:
 
-$$\text{Recall@10} = \frac{\sum_{i=1}^{32,170} \mathbb{I}(\text{Rank}_i < 10)}{32,170} = \mathbf{55.40\%}$$
+$$\text{Recall@10} = \frac{\sum_{i=1}^{32,170} \mathbb{I}(\text{Rank}_i < 10)}{32,170} = \mathbf{74.70\%} \quad (\text{vs. Baseline: } 55.40\%)$$

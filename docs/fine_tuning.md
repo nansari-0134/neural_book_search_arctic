@@ -1,21 +1,23 @@
-# ⚡ Contrastive Fine-Tuning
+# ⚡ Contrastive Fine-Tuning & Training Progression
 
-This section covers the loss function, duplicate-positive masking, and training loop optimizations.
+This document details the mathematical loss formulations, duplicate-positive loss masking, hardware memory optimizations, and the empirical progression across the **four fine-tuning stages** that produced our champion book retriever.
 
 ---
 
 ## 1. Multiple Negatives Ranking Loss (MNRL / InfoNCE)
 
-We optimize the model using **Multiple Negatives Ranking Loss** with temperature scaling $\tau = 0.05$.
+We optimize the dense retriever using **Multiple Negatives Ranking Loss** with temperature scaling $\tau = 0.05$.
 
-Given a micro-batch of $B$ queries, each query $i$ has:
+Given a micro-batch of $B$ queries, each query $i$ is associated with:
 * Target positive book $\mathbf{d}_i^+$
 * Mined hard negatives $\mathbf{d}_{i, m}^-$
-* In-batch negatives from the remaining $(B - 1)$ queries
+* In-batch negatives formed by positive documents of the other $(B - 1)$ queries
+
+The predicted probability that positive document $\mathbf{d}_i^+$ matches query $\mathbf{q}_i$ is given by the softmax over all candidates:
 
 $$P(\mathbf{d}_i^+ \mid \mathbf{q}_i) = \frac{\exp\left(\frac{\mathbf{q}_i \cdot \mathbf{d}_i^+}{\tau}\right)}{\exp\left(\frac{\mathbf{q}_i \cdot \mathbf{d}_i^+}{\tau}\right) + \sum_{j \neq i} \exp\left(\frac{\mathbf{q}_i \cdot \mathbf{d}_j^+}{\tau}\right) + \sum_{m} \exp\left(\frac{\mathbf{q}_i \cdot \mathbf{d}_{i, m}^-}{\tau}\right)}$$
 
-The loss is the cross-entropy across all queries in the batch:
+The objective minimizes the cross-entropy loss across all queries in the batch:
 
 $$\mathcal{L} = -\frac{1}{B} \sum_{i=1}^{B} \log P(\mathbf{d}_i^+ \mid \mathbf{q}_i)$$
 
@@ -23,11 +25,13 @@ $$\mathcal{L} = -\frac{1}{B} \sum_{i=1}^{B} \log P(\mathbf{d}_i^+ \mid \mathbf{q
 
 ## 2. Duplicate-Positive Loss Masking
 
-In realistic data, multiple synthetic queries can reference the exact same popular book. If Query 1 and Query 4 in the same batch both target *The Hobbit*:
-* Standard MNRL assumes Query 1's positive is book #1 and treats book #4 as an incorrect negative!
-* This penalizes the model for predicting a true match.
+In large-scale synthetic datasets, multiple user queries often describe different facets of the exact same popular book. If Query 1 and Query 4 in the same batch both target *The Hobbit*:
+* Standard MNRL assumes Query 1's ground truth is candidate #1 and treats candidate #4 as an incorrect negative.
+* This erroneously penalizes the model for predicting a true match, producing toxic gradients.
 
-### Implementation Fix
+### Implementation Solution
+We dynamically detect duplicate positive IDs within each micro-batch and mask out cross-query duplicates with $-\infty$ before computing softmax:
+
 ```python
 pos_ids = batch["positive_id"]
 if len(set(pos_ids)) < len(pos_ids):
@@ -41,84 +45,98 @@ if len(set(pos_ids)) < len(pos_ids):
 
 ---
 
-## 3. Hardware & Memory Optimizations (RTX 4050 6GB)
-
-* **Mixed Precision (FP16)**: Halves activation memory and leverages Tensor Cores.
-* **Gradient Checkpointing**: Discards forward intermediate activations and recomputes them during backprop, reducing VRAM by ~60%.
-* **Gradient Accumulation**: Micro-batch size 16 accumulated over 2 steps delivers an effective batch size of 32 while using only ~3.2 GB of VRAM.
-* **Atomic Double-Buffered Checkpointing**: Periodically rotates checkpoints (`resume_state.pt` and `.prev`) atomically to withstand system sleep or crashes without corruption.
-
----
-
-## 4. Phase 1 Execution & Results
-
-Phase 1 fine-tuning completed across all 258,250 training pairs on the NVIDIA RTX 4050 Laptop GPU:
-
-* **Optimizer**: AdamW (`lr=1.5e-5`, weight decay `0.01`)
-* **Schedule**: Linear warmup (807 steps) followed by Cosine Annealing decay
-* **Total Optimizer Steps**: 8,071 steps (16,141 micro-batches)
-* **Training Time**: 761.2 minutes (~12.7 hours)
-* **Loss Convergence**: `1.7508` (Step 50) $\rightarrow$ `0.6073` (Step 16,141)
-
-### Benchmark Summary
+## 3. The 4-Stage Fine-Tuning Progression
 
 ```mermaid
 graph TD
-    A[Pretrained Arctic Embed v1.5] -->|Phase 1 Fine-Tuning: 12.7h| B[Phase 1 Arctic Retriever]
-    B --> C["Test Recall@1: 29.16% (+7.49%)"]
-    B --> D["Test Recall@10: 64.67% (+9.27%)"]
-    B --> E["Test Recall@50: 78.20% (+8.63%)"]
+    S1["Stage 1: Pretrained Baseline (Zero-Shot Arctic v1.5)<br><i>Test Recall@10: 55.40% | Recall@50: 69.57%</i>"]
+    -->|In-Batch Contrastive Training (258,250 pairs, 12.7h)| S2["Stage 2: In-Batch Contrastive Training<br><i>Test Recall@10: 64.67% (+9.27%) | Recall@50: 78.20%</i>"]
+    
+    S2 -->|8-Layer Adversarial Mining (Ranks 2-35)| S3_Mine["Mined 199,808 Adversarial Pairs (Top-5 Negs)"]
+    S3_Mine -->|Targeted Adversarial Training (Chunk Size 12, 6.9h)| S3["Stage 3: Targeted Hard-Negative Training<br><i>Test Recall@10: 73.96% (+18.56%) | Recall@50: 84.66%</i>"]
+    
+    S3 -->|Progressive Mining (3 Fresh + 2 Retained Negs)| S4_Mine["Mined 179,319 Progressive Pairs"]
+    S4_Mine -->|Progressive Refinement (Cosine Warm-Start, 6.2h)| S4["Stage 4: Progressive Refinement (Champion Model)<br><i>Test Recall@10: 74.70% (+19.30%) | Recall@50: 85.51% (+15.94%)</i>"]
+
+    style S1 fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#fff
+    style S2 fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#fff
+    style S3 fill:#172554,stroke:#8b5cf6,stroke-width:2px,color:#fff
+    style S4 fill:#042f2e,stroke:#14b8a6,stroke-width:3px,color:#fff
 ```
 
-See [Benchmark Progression](benchmarks.md) for full catalog metrics and comparative analysis.
+---
+
+## 4. Stage 2: In-Batch Contrastive Training
+
+* **Input Data**: 258,250 query-book positive pairs (`data/train.jsonl`) generated by Qwen3-8B across 51,650 training books.
+* **Objective**: Establish domain adaptation on book metadata syntax (`Title: ... | Genres: ... | Description: ...`).
+* **Negatives**: In-batch negatives formed from other books in the micro-batch, filtered via duplicate-positive masking.
+* **Training Telemetry**:
+  - Micro-batch size: 16 | Gradient accumulation: 2 (effective batch: 32)
+  - Optimizer: AdamW (`lr=1.5e-5`, weight decay `0.01`, warmup ratio 0.1)
+  - Training time: **761.2 minutes (~12.7 hours)** across 16,141 micro-batches
+  - Loss trajectory: **`1.7508` $\rightarrow$ `0.6073`**
+* **Output Checkpoint**: `arctic_output/arctic_phase1/best_model`
 
 ---
 
-## 5. Cycle 1 Fine-Tuning & The "VRAM Cliff" Fix
+## 5. Stage 3: Targeted Hard-Negative Training & The "VRAM Cliff" Fix
 
-Cycle 1 trained the retriever on **199,808 adversarial pairs** with **Top-5 actively mined hard negatives per query**.
+### The 99-Hour Bottleneck
+When scaling from in-batch negatives to **Top-5 actively mined hard negatives per query**, each micro-batch of 16 queries required encoding:
+$$16\text{ queries} + 16\text{ positive books} + (16 \times 5 = 80\text{ hard negatives}) = \mathbf{112\text{ sequences of 512 tokens}}$$
 
-### 🛠️ The 99-Hour Bottleneck & The Engineering Solution
-In an initial unchunked pass, each micro-batch of 16 queries required encoding $16\text{ queries} + 16\text{ pos} + (16 \times 5 = 80\text{ hard negs}) = \mathbf{112\text{ sequences of 512 tokens}}$.
-* This demanded **~9.7 GB VRAM**, exceeding the 6 GB RTX 4050 capacity.
-* Windows WDDM silently paged activation tensors across the PCIe bus to shared system RAM, slowing step latency to **26.3s/step (99-hour ETA)**.
+* This required **~9.7 GB of peak activation memory**, drastically exceeding the 6 GB VRAM limit of consumer laptop GPUs (NVIDIA RTX 4050).
+* Windows WDDM silently paged activation tensors over the PCIe bus to system RAM, causing severe thrashing that exploded step latency to **26.3 seconds/step (projected 99-hour runtime)**.
 
-We solved this without dropping a single hard negative via a 3-point architectural fix:
-1. **Sub-Batch Negative Chunking**: In `embed_train(texts, chunk_size=12)`, hard negatives are encoded in slices of 12, capping peak VRAM at **~3.4 GB**.
-2. **Equivalent Micro-Batching**: Setting `batch_size = 4` with `grad_accum = 8` maintains an **effective batch size of 32** with exact mathematical gradient equivalence.
-3. **Non-Reentrant Checkpointing**: `use_reentrant=False` eliminates legacy PyTorch activation leaks.
+### The 3-Point Architectural Fix
+We eliminated the VRAM cliff without dropping a single hard negative:
 
-**Result**: Step latency collapsed from **26.3s $\rightarrow$ 0.49s (55x speedup)**, allowing Cycle 1 to complete in **6.9 hours** instead of 99 hours!
+```mermaid
+graph TD
+    Batch["Batch of 80 Negative Sequences (512 tokens each)"]
+    --> Chunking["Sub-Batch Chunking (embed_train: chunk_size=12)"]
+    Chunking --> S1["Slice 1: 12 seqs (~500 MB VRAM)"]
+    Chunking --> S2["Slice 2: 12 seqs (~500 MB VRAM)"]
+    Chunking --> S3["Slice 3: 12 seqs (~500 MB VRAM)"]
+    Chunking --> S4["... Slices 4-7"]
+    S1 & S2 & S3 & S4 --> Concat["torch.cat(dim=0) -> 80x768 Embedding Matrix"]
+    Concat --> Loss["Compute Contrastive MNRL Loss"]
+```
 
-### 📈 Cycle 1 Empirical Results (64,552 Books)
+1. **Sub-Batch Negative Chunking**: In `embed_train(texts, chunk_size=12)`, hard negative sequences are tokenized and forward-propagated in slices of 12, capping peak VRAM at **~3.4 GB**.
+2. **Equivalent Micro-Batching**: Setting `batch_size = 4` with `grad_accum = 8` preserves the **effective batch size of 32** with exact mathematical gradient equivalence.
+3. **Non-Reentrant Gradient Checkpointing**: `use_reentrant=False` prevents activation tensor accumulation during backward passes.
 
-| Metric | Baseline | Phase 1 | Cycle 1 (Mined Top-5 Negs) | Gain vs Baseline |
-| :--- | :---: | :---: | :---: | :---: |
-| **Recall@1** | 21.67% | 29.16% | **35.60%** | **+13.93% (+64% rel)** |
-| **Recall@5** | 48.41% | 58.29% | **68.09%** | **+19.68% (+41% rel)** |
-| **Recall@10** | 55.40% | 64.67% | **73.96%** | **+18.56% (+33% rel)** |
-| **Recall@50** | 69.57% | 78.20% | **84.66%** | **+15.09% (+22% rel)** |
+**Empirical Speedup**: Step latency collapsed from **26.3s $\rightarrow$ 0.49s (55x speedup)**. Stage 3 completed in **6.9 hours** instead of 99 hours!
+
+* **Output Checkpoint**: `arctic_output/arctic_v2/best_model`
 
 ---
 
-## 6. Cycle 2 Progressive Fine-Tuning & Results
+## 6. Stage 4: Progressive Refinement (Champion Model)
 
-Cycle 2 fine-tuned the retriever on **179,319 progressive adversarial pairs** from `data/train_arctic_v3.jsonl`:
-* **Starting Weights**: `arctic_output/arctic_v2/best_model` (Cycle 1 checkpoint)
-* **Warm-Start Loss**: Started at **`1.1224`** $\rightarrow$ converged to **`0.5312`**
-* **Adversarial Negatives**: 3 fresh negatives mined from Cycle 1's confusion boundary + 2 retained Cycle 1 negatives (Top-5 hard negatives per query)
-* **Schedule**: 5,604 optimizer steps with cosine annealing decay
-* **Training Time**: **374.8 minutes (~6.2 hours)**
-* **Output Checkpoint**: [arctic_output/arctic_v3/best_model](file:///c:/Users/Shilpa/OneDrive/Documents/Book%20Semantic%20Search/neural_book_search_arctic/arctic_output/arctic_v3/best_model)
+As the retriever absorbed the initial hard negatives, its decision boundary shifted. Books that were previously confused became easy, while a new tier of subtle confusions emerged.
 
-### 📈 Full Progression Comparison (64,552 Books Catalog)
+* **Progressive Mining Strategy**: Mined 3 fresh adversarial negatives from the new model's confusion zone and retained 2 robust negatives from Stage 3 (Top-5 negatives per query).
+* **Warm-Start Optimization**: Initialized directly from Stage 3 checkpoint weights.
+* **Loss Convergence**: Started at **`1.1224`** and converged smoothly to **`0.5312`** across 5,604 optimizer steps.
+* **Training Time**: **374.8 minutes (~6.2 hours)**.
+* **Output Checkpoint**: `arctic_output/arctic_v3/best_model` (438 MB).
 
-| Metric | Baseline | Phase 1 | Cycle 1 (Mined Top-5) | Cycle 2 (Champion Model) | Total Gain vs Baseline |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Recall@1** | 21.67% | 29.16% | 35.60% | **35.48%** | 🌟 **+13.81% (+64% rel)** |
-| **Recall@5** | 48.41% | 58.29% | 68.09% | **68.50%** | 🌟 **+20.09% (+42% rel)** |
-| **Recall@10** | 55.40% | 64.67% | 73.96% | **74.70%** | 👑 **+19.30% (+35% rel)** |
-| **Recall@50** | 69.57% | 78.20% | 84.66% | **85.51%** | 🌟 **+15.94% (+23% rel)** |
+---
 
+## 7. Master Comparison Across All 4 Stages (64,552 Books)
 
+Evaluated across all **32,170 unseen test queries** and **32,340 validation queries** searching the entire catalog:
 
+| Split | Metric | Stage 1: Pretrained Baseline | Stage 2: In-Batch Training | Stage 3: Targeted Hard Negatives | Stage 4: Progressive Refinement (Champion) | Net Gain vs Baseline | Relative Gain |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Test Set** | **Recall@1** | 21.67% | 29.16% | 35.60% | **35.48%** | 🌟 **+13.81%** | **+63.7%** |
+| *(32,170 queries)* | **Recall@5** | 48.41% | 58.29% | 68.09% | **68.50%** | 🌟 **+20.09%** | **+41.5%** |
+| | **Recall@10** | 55.40% | 64.67% | 73.96% | **74.70%** | 👑 **+19.30%** | **+34.8%** |
+| | **Recall@50** | 69.57% | 78.20% | 84.66% | **85.51%** | 🌟 **+15.94%** | **+22.9%** |
+| **Validation Set** | **Recall@1** | 22.24% | 29.86% | 36.01% | **36.39%** | 🌟 **+14.15%** | **+63.6%** |
+| *(32,340 queries)* | **Recall@5** | 49.02% | 59.55% | 68.78% | **69.51%** | 🌟 **+20.49%** | **+41.8%** |
+| | **Recall@10** | 55.43% | 65.70% | 74.41% | **75.04%** | 👑 **+19.61%** | **+35.4%** |
+| | **Recall@50** | 69.41% | 78.36% | 84.84% | **85.65%** | 🌟 **+16.24%** | **+23.4%** |

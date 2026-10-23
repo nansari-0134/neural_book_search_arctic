@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ArcticDense: Real-time neural semantic search across 64,552 Goodreads books using fine-tuned Snowflake Arctic Embed.">
+    <title>ArcticDense | Neural Book Search Engine</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Background glowing orbs -->
+    <div class="bg-glow orb-1"></div>
+    <div class="bg-glow orb-2"></div>
+    <div class="bg-glow orb-3"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="brand-badge">
+                <span class="status-dot"></span>
+                <span>Snowflake Arctic Embed v1.5 • Champion Retriever</span>
+            </div>
+            <h1 class="main-title">
+                Neural Book <span class="gradient-text">Search Engine</span>
+            </h1>
+            <p class="subtitle">
+                Explore <strong>64,552 Goodreads books</strong> using dense vector embeddings, progressive adversarial training, and Matryoshka dimension truncation.
+            </p>
+        </header>
+
+        <!-- Search Bar Section -->
+        <section class="search-section">
+            <div class="search-box-wrapper">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Describe a plot, theme, or feeling (e.g. 'dystopian society where memories are traded as currency')..." 
+                    autocomplete="off"
+                    autofocus
+                >
+                <div class="search-tools">
+                    <span class="kbd-shortcut" title="Press '/' to focus">/</span>
+                    <button id="clear-btn" class="clear-btn" title="Clear search" style="display: none;">&times;</button>
+                    <button id="search-btn" class="submit-btn" title="Execute search">
+                        <span>Search</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Suggestion Chips -->
+            <div class="suggestion-chips">
+                <span class="chips-label">Try asking:</span>
+                <button class="chip" data-query="dystopian rebellion where music is forbidden">🎶 Forbidden music dystopia</button>
+                <button class="chip" data-query="cozy murder mystery in an English coastal village">☕ Cozy coastal mystery</button>
+                <button class="chip" data-query="quantum physics hard sci-fi time paradox">⚛️ Quantum time paradox</button>
+                <button class="chip" data-query="ancient mythology reincarnated in modern city">⚡ Modern mythology</button>
+                <button class="chip" data-query="deep psychological horror in isolation">🕯️ Psychological isolation</button>
+            </div>
+
+            <!-- Controls Panel: MRL & Filters -->
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label class="control-label" for="mrl-select">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        Matryoshka (MRL) Dim:
+                    </label>
+                    <div class="pill-selector" id="mrl-chips">
+                        <button class="pill-opt active" data-dim="768">768-d <span class="pill-badge">Full</span></button>
+                        <button class="pill-opt" data-dim="512">512-d</button>
+                        <button class="pill-opt" data-dim="256">256-d</button>
+                        <button class="pill-opt" data-dim="128">128-d</button>
+                        <button class="pill-opt" data-dim="64">64-d <span class="pill-badge">Fast</span></button>
+                    </div>
+                </div>
+
+                <div class="control-group right-controls">
+                    <div class="dropdown-wrapper">
+                        <label class="control-label" for="genre-select">Genre Filter:</label>
+                        <select id="genre-select" class="custom-select">
+                            <option value="">All Genres</option>
+                            <option value="science-fiction">Science Fiction</option>
+                            <option value="fantasy">Fantasy</option>
+                            <option value="mystery">Mystery & Crime</option>
+                            <option value="thriller">Thriller & Suspense</option>
+                            <option value="romance">Romance</option>
+                            <option value="historical-fiction">Historical Fiction</option>
+                            <option value="horror">Horror</option>
+                            <option value="non-fiction">Non-Fiction</option>
+                            <option value="classics">Classics</option>
+                            <option value="young-adult">Young Adult</option>
+                        </select>
+                    </div>
+
+                    <div class="dropdown-wrapper">
+                        <label class="control-label" for="topk-select">Top Results:</label>
+                        <select id="topk-select" class="custom-select small-select">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search Status & Telemetry Bar -->
+        <div id="telemetry-bar" class="telemetry-bar" style="display: none;">
+            <div class="telemetry-left">
+                <span class="telemetry-item" id="result-count">Found 10 books</span>
+                <span class="telemetry-separator">•</span>
+                <span class="telemetry-item" id="mrl-indicator">768-d Matryoshka Vector</span>
+            </div>
+            <div class="telemetry-right">
+                <span class="speed-badge" id="latency-badge">
+                    <span class="flash-icon">⚡</span>
+                    <span id="latency-val">0.0 ms</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Results Grid -->
+        <main id="results-container" class="results-container">
+            <!-- Empty state shown before first search -->
+            <div class="empty-state" id="empty-state">
+                <div class="empty-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                </div>
+                <h3>Enter a natural query to explore the catalog</h3>
+                <p>Search by emotional vibe, plot twists, esoteric themes, or narrative style.</p>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div class="loading-state" id="loading-state" style="display: none;">
+                <div class="loader-spinner"></div>
+                <p>Encoding query and searching 64,552 books...</p>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-stats">
+                <span>Model: <strong>Snowflake Arctic Embed v1.5 (109M)</strong></span>
+                <span>•</span>
+                <span>Catalog: <strong>64,552 Books</strong></span>
+                <span>•</span>
+                <span>Test Recall@10: <strong>74.70% (+19.30%)</strong></span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal for Full Book Details -->
+    <div class="modal-overlay" id="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <div class="modal-header">
+                <span class="modal-badge" id="modal-score">94.2% Match</span>
+                <h2 id="modal-title" class="modal-title">Book Title</h2>
+                <div id="modal-genres" class="genres-row"></div>
+            </div>
+            <div class="modal-body">
+                <h4>Synopsis</h4>
+                <p id="modal-synopsis" class="modal-desc"></p>
+                <div class="modal-meta-row">
+                    <span id="modal-bid" class="meta-tag">Book ID: 12345</span>
+                    <button id="copy-btn" class="copy-btn">Copy Details</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

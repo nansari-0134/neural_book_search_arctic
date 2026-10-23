@@ -1,5 +1,6 @@
 {
-  "model": "arctic_cycle1",
+  "stage": "adversarial_training",
+  "description": "Targeted Adversarial Hard-Negative Training (199,808 pairs, Top-5 mined hard negatives)",
   "timestamp": "2026-10-22 22:03:27",
   "validation": {
     "R@1": 0.3601113172541744,

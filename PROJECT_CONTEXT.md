@@ -11,9 +11,9 @@
   * Pretrained Retrieval Prompt: `"Represent this sentence for searching relevant passages: "`
 * **Primary Catalog**: 64,552 Goodreads books (structured by Title, Authors, Genres, Description)
 * **Final Deliverables**:
-  1. Fine-tuned high-performance book retriever outperforming baseline.
-  2. Multi-cycle iterative hard negative mining pipeline with 8-layer false-negative shield.
-  3. Production-ready local model checkpoints with automated fast vector evaluation.
+  1. Fine-tuned high-performance book retriever outperforming baseline (+19.30% Recall@10).
+  2. Targeted and progressive adversarial negative mining pipeline with 8-layer false-negative shield.
+  3. Interactive, production-ready web application in `app/` (FastAPI + Glassmorphic UI).
   4. Comprehensive MkDocs technical documentation site ready for local and web presentation.
 
 ---
@@ -25,26 +25,26 @@
 * **Python Environment**: `..\.venv_gpu` (PyTorch 2.6.0+cu124, CUDA active, FP16 enabled)
 * **Memory Optimizations**:
   * FP16 mixed-precision inference & training (`torch.cuda.amp.autocast`)
-  * PyTorch Gradient Checkpointing (`encoder.gradient_checkpointing_enable()`)
-  * Micro-batch size: 16 | Gradient Accumulation: 2 (Effective Batch Size = 32)
+  * PyTorch Gradient Checkpointing (`encoder.gradient_checkpointing_enable(use_reentrant=False)`)
+  * Sub-batch negative chunking (`chunk_size=12`) preventing WDDM PCIe paging thrash
+  * Micro-batch size: 4 | Gradient Accumulation: 8 (Effective Batch Size = 32)
   * 2D Block-Chunked evaluation matrix multiplication
 
 ---
 
 ## 3. Step-by-Step Execution Plan & Status
 
-| Phase | Milestone / Task | Status | Output Artifact | Notes |
+| Stage | Milestone / Task | Status | Output Artifact | Empirical Performance |
 | :---: | :--- | :---: | :--- | :--- |
-| **0** | **Environment & Repo Setup** | ✅ **COMPLETE** | `neural_book_search_arctic/` | Git initialized, `.gitignore`, clean architecture |
-| **0b** | **Documentation & Tracker Setup** | ✅ **COMPLETE** | `mkdocs.yml`, `docs/`, `PROJECT_CONTEXT.md` | MkDocs Material + living documentation |
-| **1** | **Zero-Shot Baseline Benchmark** | ✅ **COMPLETE** | `results/baseline_metrics.json` | Test: R@1: 21.67%, R@10: 55.40%, R@50: 69.57% |
-| **2** | **Phase 1 Contrastive Fine-Tuning** | ✅ **COMPLETE** | `arctic_output/arctic_phase1/best_model` | Test: R@1: 29.16%, R@10: 64.67%, R@50: 78.20% |
-| **3a** | **Iterative Negative Mining (Cycle 1)**| ✅ **COMPLETE** | `data/train_arctic_v2.jsonl` | 199,808 pairs mined; 1.8M false negatives shielded |
-| **3b** | **Fine-Tuning Cycle 1** | ✅ **COMPLETE** | `arctic_output/arctic_v2/best_model` | Test: R@1: 35.60%, R@10: 73.96%, R@50: 84.66% (+18.6% R@10) |
-| **3c** | **Iterative Negative Mining (Cycle 2)**| ✅ **COMPLETE** | `data/train_arctic_v3.jsonl` | 179,319 pairs mined; 1.44M false negatives shielded |
-| **3d** | **Fine-Tuning Cycle 2** | ✅ **COMPLETE** | `arctic_output/arctic_v3/best_model` | Test: R@1: 35.48%, R@10: 74.70%, R@50: 85.51% (+19.3% R@10) |
-| **4** | **Final Benchmarking & Progression Comparison** | ✅ **COMPLETE** | `results/final_comparison.json` | Complete progression across Baseline, Phase 1, Cycle 1, and Cycle 2 |
-| **5** | **Documentation Build & Site Finalization** | ✅ **COMPLETE** | `site/` | Fully audited MkDocs documentation (strict mode 0 warnings) |
+| **0** | **Environment & Repo Decoupling** | ✅ **COMPLETE** | `app/`, `training/`, `src/` | Decoupled app from training pipeline |
+| **0b** | **Documentation & Tracker Setup** | ✅ **COMPLETE** | `mkdocs.yml`, `docs/` | MkDocs Material + living documentation |
+| **1** | **Pretrained Baseline Benchmark** | ✅ **COMPLETE** | `results/baseline_metrics.json` | Test: R@1: 21.67%, R@10: 55.40%, R@50: 69.57% |
+| **2** | **In-Batch Contrastive Training** | ✅ **COMPLETE** | `arctic_output/arctic_phase1/best_model` | Test: R@1: 29.16%, R@10: 64.67%, R@50: 78.20% (+9.27% R@10) |
+| **3** | **Targeted Hard-Negative Training**| ✅ **COMPLETE** | `arctic_output/arctic_v2/best_model` | Test: R@1: 35.60%, R@10: 73.96%, R@50: 84.66% (+18.56% R@10) |
+| **4** | **Progressive Refinement (Champion)** | ✅ **COMPLETE** | `arctic_output/arctic_v3/best_model` | Test: R@1: 35.48%, R@10: 74.70%, R@50: 85.51% (+19.30% R@10) |
+| **5** | **Finished Product Application** | ✅ **COMPLETE** | `app/app.py`, `app/search_engine.py` | Interactive search UI running in < 15ms |
+| **6** | **Master Benchmarking & Telemetry** | ✅ **COMPLETE** | `results/final_comparison.json` | Master comparative metrics across all 4 stages |
+| **7** | **Documentation Build & Audit** | ✅ **COMPLETE** | `site/` | Fully audited MkDocs documentation (strict mode 0 warnings) |
 
 ---
 
@@ -62,4 +62,4 @@
 3. **Crash-Proof Checkpointing**:
    - Atomic double-buffered checkpointing (`resume_state.pt` and `.prev`) written to disk every 5 minutes.
 4. **Git Protection**:
-   - Strictly keeps files $> 100\text{ MB}$ out of Git commits.
+   - Strictly keeps files $\ge 100\text{ MB}$ out of Git commits.

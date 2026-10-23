@@ -1,10 +1,11 @@
 """
-Evaluation of Phase 1 Fine-Tuned Model (arctic_phase1/best_model)
-Evaluates on both validation and test sets across all 64,552 catalog books.
+Step 5: Full Evaluation of Fine-Tuned Retriever Across Catalog (64,552 Books)
+Evaluates any model checkpoint on Validation and Test sets with 2D chunked recall matrix.
 """
 import sys
 import json
 import time
+import argparse
 from pathlib import Path
 import torch
 from sentence_transformers import SentenceTransformer
@@ -21,9 +22,15 @@ from src.data_loader import load_book_metadata
 from src.metrics import evaluate_recall
 
 def main():
-    model_dir = OUTPUT_DIR / "arctic_phase1" / "best_model"
+    parser = argparse.ArgumentParser(description="Evaluate retriever checkpoint against 64,552 catalog books")
+    parser.add_argument("--model-path", default=str(OUTPUT_DIR / "arctic_v3" / "best_model"), help="Path to model checkpoint")
+    parser.add_argument("--stage-name", default="Progressive Refinement (Champion Model)", help="Descriptive name of the evaluated stage")
+    parser.add_argument("--output-json", default="progressive_refinement_metrics.json", help="Filename in results/ to save metrics")
+    args = parser.parse_args()
+
+    model_dir = Path(args.model_path)
     print("=" * 70)
-    print("  EVALUATING PHASE 1 FINE-TUNED MODEL")
+    print(f"  EVALUATING RETRIEVER: {args.stage_name}")
     print(f"  Model Path: {model_dir}")
     print(f"  Device:     {DEVICE} (FP16: {USE_FP16})")
     print("=" * 70)
@@ -34,7 +41,7 @@ def main():
     print(f"Total catalog books: {len(all_book_ids):,}")
 
     # 2. Load fine-tuned model
-    print(f"\nLoading saved fine-tuned model from {model_dir}...")
+    print(f"\nLoading model from {model_dir}...")
     model = SentenceTransformer(str(model_dir), device=DEVICE)
     model.max_seq_length = MAX_SEQ_LENGTH
     if DEVICE == "cuda" and USE_FP16:
@@ -56,7 +63,7 @@ def main():
     val_metrics = evaluate_recall(
         model=model,
         split_path=VAL_FILE,
-        split_name="Phase 1 Validation",
+        split_name=f"{args.stage_name} Validation",
         meta=meta,
         all_book_ids=all_book_ids,
         cached_catalog_emb=catalog_emb
@@ -65,7 +72,7 @@ def main():
     test_metrics = evaluate_recall(
         model=model,
         split_path=TEST_FILE,
-        split_name="Phase 1 Test",
+        split_name=f"{args.stage_name} Test",
         meta=meta,
         all_book_ids=all_book_ids,
         cached_catalog_emb=catalog_emb
@@ -73,17 +80,18 @@ def main():
 
     # 5. Save results to disk
     results_payload = {
-        "model": "arctic_phase1",
+        "stage": args.stage_name,
+        "model_path": str(model_dir),
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "validation": val_metrics,
         "test": test_metrics
     }
 
-    out_file = RESULTS_DIR / "phase1_metrics.json"
+    out_file = RESULTS_DIR / args.output_json
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(results_payload, f, indent=2)
 
-    print(f"\n[Done] Phase 1 metrics saved successfully to {out_file}")
+    print(f"\n[Done] Evaluation metrics saved successfully to {out_file}")
 
 if __name__ == "__main__":
     main()

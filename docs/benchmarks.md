@@ -1,64 +1,66 @@
 # 📈 Benchmark Progression & Empirical Results
 
-This document tracks empirical performance across training cycles on the **64,552 book catalog** evaluated over **32,170 test queries** and **32,340 validation queries** (100% work-clustered, zero edition contamination).
+This document tracks empirical retrieval metrics across all training stages on the **64,552 book catalog** evaluated over **32,170 test queries** and **32,340 validation queries** (100% work-clustered, zero edition contamination).
 
 ---
 
-## 📊 Comprehensive Results Summary
+## 📊 Comprehensive Results Progression
 
 ```mermaid
 graph LR
-    subgraph Baseline ["Untrained Zero-Shot"]
+    subgraph S1 ["Stage 1: Pretrained Baseline"]
         B1["R@1: 21.67%"]
+        B5["R@5: 48.41%"]
         B10["R@10: 55.40%"]
         B50["R@50: 69.57%"]
     end
-    subgraph Phase1 ["Phase 1 (In-Batch Negs)"]
+    subgraph S2 ["Stage 2: In-Batch Training"]
         P1["R@1: 29.16% (+7.49%)"]
+        P5["R@5: 58.29% (+9.88%)"]
         P10["R@10: 64.67% (+9.27%)"]
         P50["R@50: 78.20% (+8.63%)"]
     end
-    subgraph Cycle1 ["Cycle 1 (Top-5 Hard Negs)"]
+    subgraph S3 ["Stage 3: Targeted Hard Negatives"]
         C1["R@1: 35.60% (+13.93%)"]
+        C5["R@5: 68.09% (+19.68%)"]
         C10["R@10: 73.96% (+18.56%)"]
         C50["R@50: 84.66% (+15.09%)"]
     end
-    subgraph Cycle2 ["Cycle 2 (Progressive Negs)"]
+    subgraph S4 ["Stage 4: Progressive Refinement"]
         C2_1["R@1: 35.48% (+13.81%)"]
+        C2_5["R@5: 68.50% (+20.09%)"]
         C2_10["R@10: 74.70% (+19.30%)"]
         C2_50["R@50: 85.51% (+15.94%)"]
     end
-    Baseline --> Phase1 --> Cycle1 --> Cycle2
+    S1 --> S2 --> S3 --> S4
 ```
 
 ---
 
-## 🏆 Full-Catalog Evaluation Comparison
+## 🏆 Full-Catalog Evaluation Comparison (64,552 Books)
 
 All evaluations search across the **entire 64,552-book catalog** in exact rank order using GPU 2D block-chunking:
 
-| Evaluation Split | Model Stage | Recall@1 | Recall@5 | Recall@10 | Recall@50 | Delta vs Baseline |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Test Set**<br>*(32,170 queries)* | **BGE-Small Baseline** *(Prior Ref)* | 11.52% | 32.80% | 38.84% | 53.22% | — |
-| | **BGE-Small Fine-Tuned** *(Prior Ref)* | 21.27% | 53.85% | 60.45% | 74.68% | — |
-| | **Snowflake Arctic Baseline** | **21.67%** | **48.41%** | **55.40%** | **69.57%** | Starting Point |
-| | **Snowflake Arctic Phase 1** | **29.16%** | **58.29%** | **64.67%** | **78.20%** | :rocket: **+7.49% R@1, +9.27% R@10** |
-| | **Snowflake Arctic Cycle 1** | **35.60%** | **68.09%** | **73.96%** | **84.66%** | 🌟 **+13.93% R@1, +18.56% R@10** |
-| | **Snowflake Arctic Cycle 2** | **35.48%** | **68.50%** | **74.70%** | **85.51%** | 👑 **+13.81% R@1, +19.30% R@10** |
-| **Validation Set**<br>*(32,340 queries)* | **Snowflake Arctic Baseline** | **22.24%** | **49.02%** | **55.43%** | **69.41%** | Starting Point |
-| | **Snowflake Arctic Phase 1** | **29.86%** | **59.55%** | **65.70%** | **78.36%** | :rocket: **+7.62% R@1, +10.27% R@10** |
-| | **Snowflake Arctic Cycle 1** | **36.01%** | **68.78%** | **74.41%** | **84.84%** | 🌟 **+13.77% R@1, +18.98% R@10** |
-| | **Snowflake Arctic Cycle 2** | **36.39%** | **69.51%** | **75.04%** | **85.65%** | 👑 **+14.15% R@1, +19.61% R@10** |
+| Evaluation Split | Model Stage | Recall@1 | Recall@5 | Recall@10 | Recall@50 | Delta vs Baseline | Relative Gain |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Test Set**<br>*(32,170 queries)* | **Stage 1: Pretrained Baseline** | 21.67% | 48.41% | 55.40% | 69.57% | *Starting Point* | — |
+| | **Stage 2: In-Batch Training** | 29.16% | 58.29% | 64.67% | 78.20% | :rocket: **+7.49% R@1, +9.27% R@10** | +16.7% |
+| | **Stage 3: Targeted Hard Negatives** | 35.60% | 68.09% | 73.96% | 84.66% | 🌟 **+13.93% R@1, +18.56% R@10** | +33.5% |
+| | **Stage 4: Progressive Refinement (Champion)** | **35.48%** | **68.50%** | **74.70%** | **85.51%** | 👑 **+13.81% R@1, +19.30% R@10** | **+34.8%** |
+| **Validation Set**<br>*(32,340 queries)* | **Stage 1: Pretrained Baseline** | 22.24% | 49.02% | 55.43% | 69.41% | *Starting Point* | — |
+| | **Stage 2: In-Batch Training** | 29.86% | 59.55% | 65.70% | 78.36% | :rocket: **+7.62% R@1, +10.27% R@10** | +18.5% |
+| | **Stage 3: Targeted Hard Negatives** | 36.01% | 68.78% | 74.41% | 84.84% | 🌟 **+13.77% R@1, +18.98% R@10** | +34.2% |
+| | **Stage 4: Progressive Refinement (Champion)** | **36.39%** | **69.51%** | **75.04%** | **85.65%** | 👑 **+14.15% R@1, +19.61% R@10** | **+35.4%** |
 
 ---
 
-## ⚡ Phase 1 Training Telemetry
+## ⚡ Stage 2 Training Telemetry (In-Batch Contrastive Training)
 
-The Phase 1 contrastive fine-tuning was executed on a single consumer laptop GPU (**NVIDIA GeForce RTX 4050 6GB VRAM**):
+Executed on a single consumer laptop GPU (**NVIDIA GeForce RTX 4050 6GB VRAM**):
 
 | Hyperparameter / Metric | Observed Value | Description |
 | :--- | :--- | :--- |
-| **Dataset Size** | **258,250 pairs** | 51,650 training books $\times$ 5 synthetic trope queries |
+| **Dataset Size** | **258,250 pairs** | 51,650 training books $\times$ 5 synthetic queries |
 | **Total Steps** | **16,141 steps** | 1 full epoch with batch size 16 and grad accum 2 (eff. batch 32) |
 | **Execution Time** | **761.2 minutes (~12.7 hours)** | Average step latency: ~2.4 seconds |
 | **Loss Trajectory** | **`1.7508` $\rightarrow$ `0.6073`** | Stable monotonic decline without spikes |
@@ -66,7 +68,7 @@ The Phase 1 contrastive fine-tuning was executed on a single consumer laptop GPU
 | **VRAM Footprint** | **5,879 MiB / 6,141 MiB** | 95.7% VRAM utilization with FP16 + Gradient Checkpointing |
 | **Thermal Profile** | **74°C sustained** | Stable power draw: 73W / 80W max |
 
-### Loss Milestones During Training
+### Loss Milestones During Stage 2 Training
 
 | Training Progress | Optimizer Step | Recorded MNRL Loss | Learning Rate | Elapsed Time |
 | :---: | :---: | :---: | :---: | :---: |
@@ -79,9 +81,9 @@ The Phase 1 contrastive fine-tuning was executed on a single consumer laptop GPU
 
 ---
 
-## ⚡ Cycle 1 Training Telemetry (Adversarial Hard Negatives)
+## ⚡ Stage 3 Training Telemetry (Targeted Hard-Negative Training)
 
-Cycle 1 fine-tuning introduced **5 actively mined hard negatives per query** (199,808 adversarial pairs) and was trained with sub-batch negative chunking and non-reentrant gradient checkpointing:
+Introduced **Top-5 actively mined hard negatives per query** (199,808 adversarial pairs) with sub-batch negative chunking and non-reentrant gradient checkpointing:
 
 | Hyperparameter / Metric | Observed Value | Description |
 | :--- | :--- | :--- |
@@ -91,26 +93,26 @@ Cycle 1 fine-tuning introduced **5 actively mined hard negatives per query** (19
 | **Negative Chunking** | **Chunk Size: 12** | Prevents WDDM PCIe paging thrash |
 | **Execution Time** | **416.7 minutes (~6.9 hours)** | Average step latency: **0.49 seconds** (vs 26.3s unoptimized) |
 | **VRAM Footprint** | **2,835 – 3,429 MiB** | Stable 55% utilization on RTX 4050 6GB |
-| **Thermal & Power** | **74–77°C sustained** | Stable power draw: 73W – 76W (100% compute bound) |
+| **Thermal & Power** | **74–77°C sustained** | Stable power draw: 73W – 76W |
 | **Final Loss** | **`1.4070` $\rightarrow$ `0.5841`** | Strong convergence on adversarial pairs |
 
 ---
 
-## ⚡ Cycle 2 Training Telemetry (Progressive Hard Negatives)
+## ⚡ Stage 4 Training Telemetry (Progressive Refinement - Champion)
 
-Cycle 2 fine-tuning refined the retriever on **179,319 progressive adversarial pairs** (3 fresh negatives + 2 retained negatives):
+Refined the retriever on **179,319 progressive adversarial pairs** (3 fresh negatives + 2 retained negatives) warm-started from Stage 3 weights:
 
 | Hyperparameter / Metric | Observed Value | Description |
 | :--- | :--- | :--- |
-| **Base Model Checkpoint** | **`arctic_v2/best_model`** | Warm-starts directly from Cycle 1 model |
-| **Dataset Size** | **179,319 pairs** | Filtered from Cycle 1 confusions with 8-layer shield |
+| **Base Model Checkpoint** | **`arctic_v2/best_model`** | Warm-starts directly from Stage 3 model |
+| **Dataset Size** | **179,319 pairs** | Filtered from Stage 3 confusions with 8-layer shield |
 | **Micro-Batch / Grad Accum** | **Batch 4 / Accum 8** | Effective batch size: 32 (exact gradient preservation) |
 | **Total Micro-Steps** | **44,830 micro-steps** | 5,604 full optimizer steps |
 | **Learning Rate** | **`1.20e-05`** | Cosine decay with linear warmup (560 steps) |
 | **Execution Time** | **374.8 minutes (~6.2 hours)** | Average step latency: **0.50 seconds** |
 | **VRAM Footprint** | **2,850 – 3,450 MiB** | Stable 55% utilization on RTX 4050 6GB |
 | **Thermal & Power** | **72–76°C sustained** | Stable power draw: 70W – 74W |
-| **Loss Trajectory** | **`1.1224` $\rightarrow$ `0.5312`** | High transfer efficiency from Cycle 1 weights |
+| **Loss Trajectory** | **`1.1224` $\rightarrow$ `0.5312`** | High transfer efficiency from Stage 3 weights |
 
 ---
 
@@ -120,6 +122,6 @@ For any query $q$, let $\text{Rank}(q, d^+)$ be the 1-indexed position of the gr
 
 $$\text{Recall@K} = \frac{1}{|Q|} \sum_{q \in Q} \mathbb{I}\left(\text{Rank}(q, d^+) \le K\right)$$
 
-* **Recall@1**: Measures exact first-try precision. A jump from **21.67% to 29.16%** means almost 1 in every 3 user trope queries now returns the exact target book as the very first search result.
-* **Recall@10**: Represents typical "Page 1" retrieval performance. Reaching **64.67%** ensures nearly two-thirds of all semantic queries place the ground truth book within the top 10 search cards.
-* **Recall@50**: Represents candidate generation recall for the downstream cross-encoder reranker. At **78.20%**, the reranker receives a high-quality candidate pool.
+* **Recall@1**: Measures exact first-try precision. A jump from **21.67% to 35.48%** (+63.7% relative gain) means more than 1 in every 3 user trope queries returns the target book as the very first result.
+* **Recall@10**: Represents "Page 1" retrieval performance. Reaching **74.70%** (Validation: **75.04%**) ensures three out of four semantic queries place the ground truth book within the top 10 search results.
+* **Recall@50**: Represents candidate generation recall. At **85.51%** (Validation: **85.65%**), downstream rerankers or interactive exploration modes receive an exceptionally rich candidate pool.

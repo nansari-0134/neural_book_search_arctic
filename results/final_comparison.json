@@ -6,7 +6,8 @@
   "val_queries": 32340,
   "stages": {
     "baseline": {
-      "name": "Untrained Zero-Shot Arctic Embed v1.5",
+      "name": "Pretrained Baseline (Zero-Shot Arctic v1.5)",
+      "description": "Untrained base model directly evaluated against 64,552 books",
       "test": {
         "R@1": 0.21672365557973267,
         "R@5": 0.4841156356854212,
@@ -20,8 +21,9 @@
         "R@50": 0.6940630797773655
       }
     },
-    "phase1": {
-      "name": "Phase 1 Contrastive Fine-Tuning (In-Batch Negatives)",
+    "inbatch_contrastive": {
+      "name": "In-Batch Contrastive Training",
+      "description": "Initial fine-tuning on 258,250 pairs with in-batch negatives & duplicate-positive masking",
       "test": {
         "R@1": 0.29157600248678894,
         "R@5": 0.5829033260801989,
@@ -36,8 +38,9 @@
       },
       "delta_test_r10_vs_baseline": 0.09275722723033886
     },
-    "cycle1": {
-      "name": "Cycle 1 Adversarial Fine-Tuning (Top-5 Mined Negatives)",
+    "adversarial_training": {
+      "name": "Targeted Hard-Negative Training",
+      "description": "Adversarial fine-tuning on 199,808 pairs with Top-5 mined hard negatives from model confusion zone (Ranks 2-35)",
       "test": {
         "R@1": 0.3560460055952751,
         "R@5": 0.6809138949331676,
@@ -52,8 +55,9 @@
       },
       "delta_test_r10_vs_baseline": 0.1856698787690395
     },
-    "cycle2": {
-      "name": "Cycle 2 Progressive Fine-Tuning (Champion Model)",
+    "progressive_refinement": {
+      "name": "Progressive Refinement (Champion Model)",
+      "description": "Progressive refinement on 179,319 pairs (3 fresh + 2 retained hard negatives) with sub-batch chunking",
       "test": {
         "R@1": 0.3547715262667081,
         "R@5": 0.6849860118122474,

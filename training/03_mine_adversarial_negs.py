@@ -1,7 +1,7 @@
 """
-Step 3: Iterative Hard Negative Mining and Multi-Cycle Fine-Tuning
+Step 3: Adversarial Hard Negative Mining for Snowflake Arctic Embed (v1.5)
 Mines actual false-positive confusions using the fine-tuned Snowflake Arctic model,
-filters with the 8-layer protection shield, and trains progressive cycles.
+filters with the 8-layer protection shield, and produces hardened contrastive datasets.
 """
 import sys
 import os
@@ -56,10 +56,10 @@ def mine_dataset(
     meta: dict,
     input_file: Path,
     output_file: Path,
-    cycle_num: int,
+    stage_name: str = "Targeted Mining",
 ):
     print(f"\n=======================================================", flush=True)
-    print(f"  CYCLE {cycle_num}: HARD NEGATIVE MINING (ARCTIC)", flush=True)
+    print(f"  {stage_name.upper()}: HARD NEGATIVE MINING (ARCTIC)", flush=True)
     print(f"  Input:  {input_file.name}", flush=True)
     print(f"  Output: {output_file.name}", flush=True)
     print(f"=======================================================", flush=True)
@@ -86,7 +86,7 @@ def mine_dataset(
     total = len(train_rows)
     t0 = time.time()
 
-    for b_start in tqdm(range(0, total, batch_size), desc=f"Mining Cycle {cycle_num}"):
+    for b_start in tqdm(range(0, total, batch_size), desc=f"{stage_name}"):
         b_end = min(b_start + batch_size, total)
         batch = train_rows[b_start:b_end]
 
@@ -207,11 +207,11 @@ def mine_dataset(
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="Mine hard negatives using fine-tuned Arctic model")
+    parser = argparse.ArgumentParser(description="Mine adversarial hard negatives using fine-tuned Arctic model")
     parser.add_argument("--model-dir", default=str(OUTPUT_DIR / "arctic_phase1" / "best_model"), help="Path to fine-tuned model")
     parser.add_argument("--input-file", default=str(TRAIN_FILE), help="Input JSONL file")
     parser.add_argument("--output-file", default=str(DATA_DIR / "train_arctic_v2.jsonl"), help="Output JSONL file")
-    parser.add_argument("--cycle", type=int, default=1, help="Mining cycle number")
+    parser.add_argument("--stage-name", default="Targeted Hard-Negative Mining", help="Descriptive stage name")
     args = parser.parse_args()
 
     model_path = Path(args.model_dir)
@@ -219,7 +219,7 @@ def main():
     output_path = Path(args.output_file)
 
     print("=" * 70, flush=True)
-    print(f"  STEP 3: HARD NEGATIVE MINING (CYCLE {args.cycle})", flush=True)
+    print(f"  STEP 3: {args.stage_name.upper()}", flush=True)
     print(f"  Model:   {model_path}", flush=True)
     print(f"  Input:   {input_path.name}", flush=True)
     print(f"  Output:  {output_path.name}", flush=True)
@@ -249,11 +249,11 @@ def main():
         meta=meta,
         input_file=input_path,
         output_file=output_path,
-        cycle_num=args.cycle
+        stage_name=args.stage_name
     )
 
     print("\n" + "=" * 70, flush=True)
-    print(f"  CYCLE {args.cycle} MINING COMPLETED SUCCESSFULLY!", flush=True)
+    print(f"  {args.stage_name.upper()} COMPLETED SUCCESSFULLY!", flush=True)
     print(f"  Output Dataset: {output_path}", flush=True)
     print("=" * 70, flush=True)
 
