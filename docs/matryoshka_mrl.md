@@ -54,7 +54,7 @@ By backpropagating gradients from multiple sub-vector dimensions through the sha
 | :--- | :--- | :--- |
 | **Vector Geometry** | Uniformly entangled representation | **Hierarchically nested representations** |
 | **Dimensional Flexibility** | Fixed (always $768$ coordinates) | **Dynamic** ($64$, $128$, $256$, $512$, or $768$) |
-| **Slicing Impact** | :x: Catastrophic accuracy collapse | :white_check_mark: **Retains $>99\%$ Recall@10 at 256-d** |
+| **Slicing Impact** | ❌ Catastrophic accuracy collapse | ✅ **Retains $>99\%$ Recall@10 at 256-d** |
 | **Inference Compression Cost** | Requires distillation or separate models | **Zero cost** (2-line array slicing) |
 | **Storage & RAM Savings** | 0% (Must store all 768 float values) | **Up to 12x reduction** (from 99MB to 8MB) |
 

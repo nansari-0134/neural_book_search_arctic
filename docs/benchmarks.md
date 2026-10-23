@@ -44,11 +44,11 @@ All evaluations search across the **entire 64,552-book catalog** in exact rank o
 | Evaluation Split | Model Stage | Recall@1 | Recall@5 | Recall@10 | Recall@50 | Delta vs Baseline | Relative Gain |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Test Set**<br>*(32,170 queries)* | **Stage 1: Pretrained Baseline** | 21.67% | 48.41% | 55.40% | 69.57% | *Starting Point* | — |
-| | **Stage 2: In-Batch Training** | 29.16% | 58.29% | 64.67% | 78.20% | :rocket: **+7.49% R@1, +9.27% R@10** | +16.7% |
+| | **Stage 2: In-Batch Training** | 29.16% | 58.29% | 64.67% | 78.20% | 🚀 **+7.49% R@1, +9.27% R@10** | +16.7% |
 | | **Stage 3: Targeted Hard Negatives** | 35.60% | 68.09% | 73.96% | 84.66% | 🌟 **+13.93% R@1, +18.56% R@10** | +33.5% |
 | | **Stage 4: Progressive Refinement (Champion)** | **35.48%** | **68.50%** | **74.70%** | **85.51%** | 👑 **+13.81% R@1, +19.30% R@10** | **+34.8%** |
 | **Validation Set**<br>*(32,340 queries)* | **Stage 1: Pretrained Baseline** | 22.24% | 49.02% | 55.43% | 69.41% | *Starting Point* | — |
-| | **Stage 2: In-Batch Training** | 29.86% | 59.55% | 65.70% | 78.36% | :rocket: **+7.62% R@1, +10.27% R@10** | +18.5% |
+| | **Stage 2: In-Batch Training** | 29.86% | 59.55% | 65.70% | 78.36% | 🚀 **+7.62% R@1, +10.27% R@10** | +18.5% |
 | | **Stage 3: Targeted Hard Negatives** | 36.01% | 68.78% | 74.41% | 84.84% | 🌟 **+13.77% R@1, +18.98% R@10** | +34.2% |
 | | **Stage 4: Progressive Refinement (Champion)** | **36.39%** | **69.51%** | **75.04%** | **85.65%** | 👑 **+14.15% R@1, +19.61% R@10** | **+35.4%** |
 
@@ -241,11 +241,11 @@ To resolve the parameter capacity bottleneck where the first-stage retriever (10
 
 | Metric | Stage 1: Arctic Retriever (109M) | Stage 2: MiniLM Reranker (22.7M) | Stage 2: Fine-Tuned Jina Reranker v2 (278M) | Jina vs Arctic Delta | Jina vs MiniLM Gain |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Recall@1** | **49.00%** | 42.30% *(Degraded)* | **48.40%** *(Preserved)* | -0.60% | **+6.10%** :fire: |
-| **Recall@5** | 66.40% | 56.60% *(Degraded)* | **67.00%** | **+0.60%** :chart_with_upwards_trend: | **+10.40%** :fire: |
-| **Recall@10** | 71.80% | 62.90% *(Degraded)* | **73.80%** | **+2.00%** :rocket: | **+10.90%** :fire: |
+| **Recall@1** | **49.00%** | 42.30% *(Degraded)* | **48.40%** *(Preserved)* | -0.60% | **+6.10%** 🔥 |
+| **Recall@5** | 66.40% | 56.60% *(Degraded)* | **67.00%** | **+0.60%** 📈 | **+10.40%** 🔥 |
+| **Recall@10** | 71.80% | 62.90% *(Degraded)* | **73.80%** | **+2.00%** 🚀 | **+10.90%** 🔥 |
 | **Recall@50** | **83.10%** | 83.10% *(Top 50 Pool)* | **83.10%** *(Top 50 Pool)* | — | — |
-| **MRR@10** | 0.5681 | 0.4848 *(Degraded)* | **0.5649** | -0.0032 | **+0.0801** :white_check_mark: |
+| **MRR@10** | 0.5681 | 0.4848 *(Degraded)* | **0.5649** | -0.0032 | **+0.0801** ✅ |
 | **Query Latency** | **8.75 ms** | 86.4 ms | **167.99 ms** | +159.2 ms | — |
 
 ### 🔍 Key Machine Learning Findings
@@ -292,11 +292,11 @@ Evaluated against the entire 64,552-book catalog on 1,000 holdout test queries a
 
 | Metric | Stage 1: Arctic Dense (109M) | Stage 2: MiniLM (22.7M) | Stage 2: Pointwise Jina (278M) | Stage 2: Contrastive Jina (278M) | Stage 2: Hybrid Cascade (Dense + Contrastive) | Total Gain vs Stage 1 | Total Gain vs MiniLM |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Recall@1** | 49.00% | 42.30% *(Degraded)* | 48.40% | 48.40% | **52.50%** :fire: | **+3.50%** | **+10.20%** :star2: |
-| **Recall@5** | 66.40% | 56.60% *(Degraded)* | 67.00% | 66.80% | **70.00%** :chart_with_upwards_trend: | **+3.60%** | **+13.40%** :star2: |
-| **Recall@10** | 71.80% | 62.90% *(Degraded)* | 73.80% | 72.80% | **74.90%** :rocket: | **+3.10%** | **+12.00%** :star2: |
+| **Recall@1** | 49.00% | 42.30% *(Degraded)* | 48.40% | 48.40% | **52.50%** 🔥 | **+3.50%** | **+10.20%** 🌟 |
+| **Recall@5** | 66.40% | 56.60% *(Degraded)* | 67.00% | 66.80% | **70.00%** 📈 | **+3.60%** | **+13.40%** 🌟 |
+| **Recall@10** | 71.80% | 62.90% *(Degraded)* | 73.80% | 72.80% | **74.90%** 🚀 | **+3.10%** | **+12.00%** 🌟 |
 | **Recall@50** | **83.10%** | 83.10% *(Top 50 Pool)* | 83.10% | 83.10% | **83.10%** | — | — |
-| **MRR@10** | 0.5681 | 0.4848 *(Degraded)* | 0.5649 | 0.5626 | **0.6001** :crown: | **+0.0320** | **+0.1153** :star2: |
+| **MRR@10** | 0.5681 | 0.4848 *(Degraded)* | 0.5649 | 0.5626 | **0.6001** 👑 | **+0.0320** | **+0.1153** 🌟 |
 | **Query Latency** | **9.06 ms** | 86.4 ms | 167.99 ms | 168.13 ms | **177.20 ms** | +168.1 ms | — |
 
 ---

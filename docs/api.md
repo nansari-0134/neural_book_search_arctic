@@ -12,10 +12,10 @@ Interactive API documentation is also available directly in the browser when run
 
 | Method | Endpoint | Description | Cacheable |
 | :--- | :--- | :--- | :---: |
-| `GET` | `/api/search` | Search via URL query parameters | :white_check_mark: Yes (Redis) |
-| `POST` | `/api/search` | Search via structured JSON request body | :white_check_mark: Yes (Redis) |
-| `GET` | `/api/health` | Service and index readiness probe | :x: No |
-| `GET` | `/api/stats` | System telemetry, hardware device, and cache stats | :x: No |
+| `GET` | `/api/search` | Search via URL query parameters | ✅ Yes (Redis) |
+| `POST` | `/api/search` | Search via structured JSON request body | ✅ Yes (Redis) |
+| `GET` | `/api/health` | Service and index readiness probe | ❌ No |
+| `GET` | `/api/stats` | System telemetry, hardware device, and cache stats | ❌ No |
 
 ---
 
