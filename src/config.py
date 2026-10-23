@@ -25,11 +25,17 @@ MODEL_NAME = "Snowflake/snowflake-arctic-embed-m-v1.5"
 QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 MAX_SEQ_LENGTH = 512
 
-# Hardware Configuration (Optimized for NVIDIA RTX 4050 6GB)
-NUM_THREADS = os.cpu_count() or 8
+# Hardware Configuration (Optimized for NVIDIA GPUs with automatic CPU fallback)
+NUM_THREADS = int(os.environ.get("OMP_NUM_THREADS", os.cpu_count() or 8))
 torch.set_num_threads(NUM_THREADS)
 
-if torch.cuda.is_available():
+REQ_DEVICE = os.environ.get("DEVICE", "").lower().strip()
+if REQ_DEVICE == "cpu":
+    DEVICE = "cpu"
+    USE_FP16 = False
+    GPU_NAME = "CPU"
+    VRAM_GB = 0.0
+elif torch.cuda.is_available():
     DEVICE = "cuda"
     USE_FP16 = True
     GPU_NAME = torch.cuda.get_device_name(0)

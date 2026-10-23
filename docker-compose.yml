@@ -1,0 +1,33 @@
+services:
+  arctic-search:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: arctic-search:latest
+    container_name: arctic_book_search
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - DEVICE=cuda
+      - OMP_NUM_THREADS=8
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    # Optional host volumes for live development / persistence:
+    # volumes:
+    #   - ./arctic_output:/app/arctic_output:ro
+    #   - ./data/books_metadata.sqlite3:/app/data/books_metadata.sqlite3:ro
+    #   - ./app/.cache:/app/app/.cache

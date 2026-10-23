@@ -65,4 +65,5 @@ nav:
   - Iterative Negative Mining: iterative_mining.md
   - Benchmark Progression: benchmarks.md
   - Recall@K Metrics Math: metrics_explanation.md
+  - Docker & Cloud Deployment: docker.md
 
