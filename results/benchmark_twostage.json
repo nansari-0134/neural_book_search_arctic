@@ -1,0 +1,22 @@
+{
+  "evaluation_queries": 1000,
+  "catalog_size": 64552,
+  "stage1_bi_encoder": {
+    "recall_1": 49.0,
+    "recall_5": 66.4,
+    "recall_10": 71.8,
+    "recall_50": 83.1,
+    "mrr_10": 0.5681424603174602,
+    "mean_latency_ms": 8.77908182144165
+  },
+  "stage2_cross_encoder": {
+    "recall_1": 42.3,
+    "recall_5": 56.599999999999994,
+    "recall_10": 62.9,
+    "mrr_10": 0.48478888888888894,
+    "mean_latency_ms": 77.65220141410828,
+    "total_latency_ms": 86.43128323554993
+  },
+  "relative_gain_r1": -13.673469387755107,
+  "relative_gain_mrr10": -14.671244846230271
+}

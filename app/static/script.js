@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBid = document.getElementById('modal-bid');
     const copyBtn = document.getElementById('copy-btn');
 
+    const rerankToggle = document.getElementById('rerank-toggle');
+
     // State
     let currentDim = 768;
     let currentGenre = '';
@@ -50,6 +52,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     checkHealth();
+
+    // Rerank Toggle Listener
+    if (rerankToggle) {
+        rerankToggle.addEventListener('change', () => {
+            if (searchInput.value.trim()) {
+                performSearch();
+            }
+        });
+    }
 
     // Keyboard shortcut '/' to focus
     window.addEventListener('keydown', (e) => {
@@ -156,10 +167,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (existingGrid) existingGrid.remove();
 
         try {
+            const isRerank = rerankToggle && rerankToggle.checked;
             const params = new URLSearchParams({
                 q: query,
                 dim: currentDim,
-                top_k: currentTopK
+                top_k: currentTopK,
+                rerank: isRerank
             });
             if (currentGenre) {
                 params.append('genre', currentGenre);
@@ -202,9 +215,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update telemetry
         telemetryBar.style.display = 'flex';
-        latencyVal.textContent = `${data.latency_ms} ms`;
+        if (data.reranked) {
+            latencyVal.textContent = `${data.latency_ms} ms (${data.bi_encoder_latency_ms}ms retrieval + ${data.rerank_latency_ms}ms rerank)`;
+            mrlIndicator.textContent = `Two-Stage: ${data.mrl_dim}-d Arctic + Cross-Encoder`;
+        } else {
+            latencyVal.textContent = `${data.latency_ms} ms`;
+            mrlIndicator.textContent = `${data.mrl_dim}-d Arctic Vector`;
+        }
         resultCount.textContent = `Found ${data.results.length} books in catalog`;
-        mrlIndicator.textContent = `${data.mrl_dim}-d Matryoshka Vector`;
 
         const grid = document.createElement('div');
         grid.className = 'books-grid';
@@ -219,11 +237,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(g => `<span class="genre-pill">${escapeHtml(g)}</span>`)
                 .join('');
 
+            const scoreBadgeHtml = book.reranked
+                ? `<span class="score-badge" style="background: rgba(139, 92, 246, 0.2); border-color: rgba(139, 92, 246, 0.4); color: #c4b5fd;">⚡ ${book.score_pct} CE Match</span>`
+                : `<span class="score-badge">${book.score_pct} Match</span>`;
+
             card.innerHTML = `
                 <div>
                     <div class="book-card-header">
                         <h3 class="book-title">${escapeHtml(book.title)}</h3>
-                        <span class="score-badge">${book.score_pct} Match</span>
+                        ${scoreBadgeHtml}
                     </div>
                     <div class="book-genres">${genresHtml}</div>
                     <p class="book-snippet">${escapeHtml(book.snippet)}</p>

@@ -19,7 +19,7 @@ from typing import List, Dict, Any, Optional
 
 import numpy as np
 import torch
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 # Add project root to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +33,7 @@ from src.config import (
 # Priority order for model checkpoint loading
 CHAMPION_MODEL_PATH = OUTPUT_DIR / "arctic_v3" / "best_model"
 FALLBACK_MODEL_PATH = OUTPUT_DIR / "arctic_v2" / "best_model"
+CROSS_ENCODER_MODEL_PATH = OUTPUT_DIR / "cross_encoder" / "best_model"
 
 CACHE_DIR = PROJECT_ROOT / "app" / ".cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -57,11 +58,13 @@ class BookSearchEngine:
             self.model_path = Path(MODEL_NAME)
             
         self.model: Optional[SentenceTransformer] = None
+        self.cross_encoder: Optional[CrossEncoder] = None
         self.catalog_ids: List[str] = []
         self.catalog_embeddings: Optional[np.ndarray] = None
         self.id_to_idx: Dict[str, int] = {}
         self.book_metadata: Dict[str, Dict[str, Any]] = {}
         self.is_ready = False
+
 
         if not lazy_load:
             self.initialize()
@@ -85,8 +88,18 @@ class BookSearchEngine:
         # 3. Load or compute catalog embeddings
         self._load_or_compute_embeddings()
         
+        # 4. Load Cross-Encoder reranker if available
+        if CROSS_ENCODER_MODEL_PATH.exists():
+            print(f"[Search Engine] Loading Cross-Encoder reranker from {CROSS_ENCODER_MODEL_PATH.name}...")
+            try:
+                self.cross_encoder = CrossEncoder(str(CROSS_ENCODER_MODEL_PATH), max_length=256, device=self.device)
+                print("[Search Engine] Cross-Encoder loaded successfully!")
+            except Exception as e:
+                print(f"[Search Engine] Warning: Could not load Cross-Encoder: {e}")
+
         self.is_ready = True
         print(f"[Search Engine] Ready! Initialized {len(self.catalog_ids):,} books in {time.time() - t0:.2f}s.")
+
 
     def _load_metadata(self):
         """Loads book metadata into memory for fast enrichment."""
@@ -170,10 +183,12 @@ class BookSearchEngine:
         query: str,
         top_k: int = 10,
         mrl_dim: int = 768,
-        genre_filter: Optional[str] = None
+        genre_filter: Optional[str] = None,
+        rerank: bool = False
     ) -> Dict[str, Any]:
         """
-        Executes semantic search with Matryoshka dimension truncation & optional genre filtering.
+        Executes semantic search with Matryoshka dimension truncation, optional genre filtering,
+        and optional Stage 2 Cross-Encoder precision reranking over top candidates.
         """
         if not self.is_ready:
             self.initialize()
@@ -181,7 +196,7 @@ class BookSearchEngine:
         t0 = time.perf_counter()
         query_text = f"{QUERY_INSTRUCTION}{query.strip()}"
 
-        # 1. Encode query
+        # 1. Encode query with Stage 1 Bi-Encoder
         q_emb = self.model.encode(
             query_text,
             convert_to_numpy=True,
@@ -202,8 +217,11 @@ class BookSearchEngine:
             doc_norms[doc_norms == 0] = 1e-12
             doc_matrix = doc_matrix / doc_norms
 
-        # 3. Compute cosine similarities
+        # 3. Compute cosine similarities across catalog
         scores = doc_matrix @ q_vec
+
+        # Determine candidate pool size
+        candidate_k = 50 if (rerank and self.cross_encoder is not None) else top_k
 
         # 4. Optional genre filtering
         if genre_filter:
@@ -215,46 +233,81 @@ class BookSearchEngine:
             if filtered_indices:
                 filtered_indices = np.array(filtered_indices)
                 sub_scores = scores[filtered_indices]
-                sub_top_k = min(top_k, len(sub_scores))
+                sub_top_k = min(candidate_k, len(sub_scores))
                 top_sub_idx = np.argpartition(-sub_scores, sub_top_k - 1)[:sub_top_k]
                 sorted_sub_idx = top_sub_idx[np.argsort(-sub_scores[top_sub_idx])]
-                best_indices = filtered_indices[sorted_sub_idx]
+                candidate_indices = filtered_indices[sorted_sub_idx]
             else:
-                best_indices = []
+                candidate_indices = []
         else:
-            top_k_clamp = min(top_k, len(scores))
-            candidate_indices = np.argpartition(-scores, top_k_clamp - 1)[:top_k_clamp]
-            best_indices = candidate_indices[np.argsort(-scores[candidate_indices])]
+            top_k_clamp = min(candidate_k, len(scores))
+            top_sub_indices = np.argpartition(-scores, top_k_clamp - 1)[:top_k_clamp]
+            candidate_indices = top_sub_indices[np.argsort(-scores[top_sub_indices])]
 
-        elapsed_ms = (time.perf_counter() - t0) * 1000
+        t_bi_encoder = (time.perf_counter() - t0) * 1000
+        rerank_latency_ms = 0.0
+        is_reranked = False
 
-        # 5. Enrich results
+        # 5. Stage 2: Cross-Encoder Reranking
+        if rerank and self.cross_encoder is not None and len(candidate_indices) > 0:
+            t_ce_start = time.perf_counter()
+            passages = []
+            for idx in candidate_indices:
+                meta = self.book_metadata[self.catalog_ids[idx]]
+                genres_str = ", ".join(meta["genres"]) if meta["genres"] else "General"
+                passages.append(f"Title: {meta['title']} | Genres: {genres_str} | Description: {meta['description'][:900]}")
+
+            pairs = [(query.strip(), p) for p in passages]
+            ce_logits = self.cross_encoder.predict(pairs, batch_size=len(pairs), show_progress_bar=False)
+            
+            # Sigmoid normalization for clean probability confidence
+            ce_probs = 1.0 / (1.0 + np.exp(-ce_logits))
+            rerank_order = np.argsort(ce_probs)[::-1][:top_k]
+
+            best_indices = [candidate_indices[i] for i in rerank_order]
+            final_scores = [float(ce_probs[i]) for i in rerank_order]
+            rerank_latency_ms = (time.perf_counter() - t_ce_start) * 1000
+            is_reranked = True
+        else:
+            best_indices = candidate_indices[:top_k]
+            final_scores = [float(scores[idx]) for idx in best_indices]
+
+        total_elapsed_ms = (time.perf_counter() - t0) * 1000
+
+        # 6. Enrich results
         results = []
-        for idx in best_indices:
+        for i, idx in enumerate(best_indices):
             bid = self.catalog_ids[idx]
             meta = self.book_metadata[bid]
-            score = float(scores[idx])
+            score = final_scores[i]
             desc = meta["description"]
             snippet = (desc[:240] + "...") if len(desc) > 240 else desc
             
-            results.append({
+            item = {
                 "book_id": bid,
                 "title": meta["title"],
                 "score": round(score, 4),
                 "score_pct": f"{max(0.0, score) * 100:.1f}%",
+                "bi_encoder_score": round(float(scores[idx]), 4),
                 "genres": meta["genres"],
                 "snippet": snippet,
                 "full_description": desc,
-            })
+                "reranked": is_reranked
+            }
+            results.append(item)
 
         return {
             "query": query,
-            "latency_ms": round(elapsed_ms, 2),
+            "latency_ms": round(total_elapsed_ms, 2),
+            "bi_encoder_latency_ms": round(t_bi_encoder, 2),
+            "rerank_latency_ms": round(rerank_latency_ms, 2),
+            "reranked": is_reranked,
             "mrl_dim": dim,
             "genre_filter": genre_filter,
             "total_catalog": len(self.catalog_ids),
             "results": results
         }
+
 
 
 def main():

@@ -408,6 +408,71 @@ body {
     width: 65px;
 }
 
+/* Cross-Encoder Toggle Switch */
+.rerank-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-switch-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.toggle-switch-wrapper input {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    transition: all 0.25s ease;
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    bottom: 2px;
+    background: #fff;
+    border-radius: 50%;
+    transition: all 0.25s ease;
+}
+
+.toggle-switch-wrapper input:checked + .toggle-slider {
+    background: linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+}
+
+.toggle-switch-wrapper input:checked + .toggle-slider::before {
+    transform: translateX(16px);
+}
+
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s ease;
+}
+
+.toggle-switch-wrapper input:checked ~ .toggle-label {
+    color: var(--accent-cyan-light);
+    font-weight: 600;
+}
+
 /* Telemetry Bar */
 .telemetry-bar {
     display: flex;

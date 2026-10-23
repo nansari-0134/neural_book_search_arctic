@@ -69,7 +69,8 @@ async def search_endpoint(
     q: str = Query(..., description="Natural language search query"),
     dim: int = Query(768, ge=64, le=768, description="Matryoshka representation dimension"),
     genre: Optional[str] = Query(None, description="Optional genre / shelf filter"),
-    top_k: int = Query(10, ge=1, le=50, description="Number of results to return")
+    top_k: int = Query(10, ge=1, le=50, description="Number of results to return"),
+    rerank: bool = Query(False, description="Enable Cross-Encoder precision reranking over Top 50 candidates")
 ):
     global _engine, _init_error
     if not q or not q.strip():
@@ -84,8 +85,9 @@ async def search_endpoint(
             status_code=503
         )
 
-    results = _engine.search(query=q.strip(), top_k=top_k, mrl_dim=dim, genre_filter=genre)
+    results = _engine.search(query=q.strip(), top_k=top_k, mrl_dim=dim, genre_filter=genre, rerank=rerank)
     return results
+
 @app.get("/api/stats")
 async def stats_endpoint():
     global _engine

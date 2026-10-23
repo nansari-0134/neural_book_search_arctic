@@ -173,8 +173,37 @@ The bi-encoder is already performing its intended role with exceptional accuracy
 * However, because 5 to 10 books in the catalog may share very similar tropes (e.g., five classic cyberpunk detective novels), their dot-product scores differ by mere thousandths (e.g., `0.784`, `0.781`, `0.779`). A bi-encoder cannot break these ties reliably.
 
 ### 5. The Solution: Two-Stage Retrieval with a Cross-Encoder
-To elevate Recall@1 from ~35% into the **55%–65%+** range, the industry-standard architecture pairs the bi-encoder with a **Cross-Encoder Reranker**:
-* **Stage 1 (Arctic Bi-Encoder)**: Rapid candidate generation across all 64,552 books in **< 15ms**, filtering the catalog down to the Top 50 candidates.
+To evaluate whether joint cross-attention could further improve top-1 precision, we constructed a **Two-Stage Retrieval Cascade**:
+* **Stage 1 (Arctic Bi-Encoder)**: Rapid candidate generation across all 64,552 books in **< 10ms**, filtering the catalog down to the Top 50 candidates.
 * **Stage 2 (Cross-Encoder)**: Takes each `[CLS] Query [SEP] Book Title & Synopsis [SEP]` pair and computes full all-to-all cross-attention across all transformer layers.
-* This unlocks exact lexical matching, negation handling (*"murder mystery without supernatural elements"*), and relational reasoning that single-vector embeddings cannot capture.
+
+---
+
+## ⚡ Stage 5: Empirical Two-Stage Cascade Benchmark
+
+We trained a Cross-Encoder reranker (`cross-encoder/ms-marco-MiniLM-L-6-v2`, 22.7M parameters) using **158,551 balanced pairs** mined directly from the champion Arctic retriever, and evaluated both stages side-by-side across 1,000 test set queries over the full 64,552 book catalog:
+
+| Metric | Stage 1: Arctic Bi-Encoder (109M) | Stage 2: Cross-Encoder Reranker (22.7M) | Delta | Latency Profile |
+| :--- | :---: | :---: | :---: | :---: |
+| **Recall@1** | **49.00%** | 42.30% | -6.70% | Stage 1: **8.8 ms** |
+| **Recall@5** | **66.40%** | 56.60% | -9.80% | — |
+| **Recall@10** | **71.80%** | 62.90% | -8.90% | — |
+| **Recall@50** | **83.10%** | *(Top 50 Pool)* | — | — |
+| **MRR@10** | **0.5681** | 0.4848 | -0.0834 | Stage 2: **+77.7 ms** |
+| **Total Query Latency** | **8.8 ms** | 86.4 ms | +77.6 ms | **9.8x Slower** |
+
+### 🔍 Key Machine Learning Findings & Analysis
+
+1. **The "Retriever Outstripping Reranker" Phenomenon**:
+   * The fine-tuned Arctic Bi-Encoder is a **109 Million parameter** model that underwent extensive contrastive instruction tuning across 64,552 books and multiple rounds of hard negative mining.
+   * In contrast, the MiniLM Cross-Encoder has only **22.7 Million parameters** (almost $5\times$ smaller) and 6 layers.
+   * In neural information retrieval, if the first-stage retriever is substantially larger and more deeply specialized than the reranker, a smaller cross-encoder can actually **degrade top-rank accuracy** because it lacks the representational capacity of the larger retriever.
+
+2. **The Power of the Standalone Arctic Retriever**:
+   * On this test set, the standalone Arctic Bi-Encoder already achieves **49.00% Recall@1** and **71.80% Recall@10** at **8.8 ms latency**. Nearly 1 out of every 2 user searches lands on the exact ground-truth book at rank #1 without any secondary reranker overhead.
+
+3. **Production Recommendation**:
+   * The champion fine-tuned Arctic Bi-Encoder (`arctic_v3`) is the **primary production engine** for sub-15ms high-accuracy search.
+   * The Cross-Encoder is integrated into the web application as an **interactive toggle switch (`⚡ Cross-Encoder Rerank`)**, allowing users to explore and contrast both neural architectures in real time.
+
 
