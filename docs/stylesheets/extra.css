@@ -1,0 +1,32 @@
+/* Custom Styling for Material MkDocs - Clean, Spacious Mermaid Graphs & Typography */
+
+.mermaid {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 1.8rem auto !important;
+  padding: 1.2rem !important;
+  background: var(--md-code-bg-color, rgba(0, 0, 0, 0.05)) !important;
+  border: 1px solid var(--md-default-fg-color--lightest, rgba(0, 0, 0, 0.1)) !important;
+  border-radius: 10px !important;
+  overflow-x: auto !important;
+}
+
+.mermaid svg {
+  min-width: 650px !important;
+  max-width: 100% !important;
+  height: auto !important;
+  font-family: var(--md-text-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
+}
+
+.mermaid text {
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+}
+
+/* Ensure data tables take comfortable width */
+.md-typeset table:not([class]) {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  width: 100%;
+}

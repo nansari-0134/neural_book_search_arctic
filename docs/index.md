@@ -76,8 +76,10 @@ graph LR
 ## 🚀 Quick Navigation
 
 * [System Architecture](architecture.md): Deep dive into dense retrieval, asymmetric instructions, and MRL mechanics.
+* [REST API Reference](api.md): Complete guide to GET/POST search endpoints, parameters, and JSON schemas.
 * [Data Pipeline & Clustering](data_pipeline.md): Goodreads metadata curation, Qwen3 synthetic queries, and `work_id` cluster splitting.
 * [Contrastive Fine-Tuning](fine_tuning.md): MNRL loss math, duplicate masking, sub-batch chunking, and the 4 training stages.
 * [Iterative Negative Mining](iterative_mining.md): Mining from the model's confusion zone (Ranks 2–35) and the 8-layer defense shield.
 * [Benchmark Progression](benchmarks.md): Comprehensive results progression table, loss trajectories, and hardware telemetry.
-* [Recall@K Metrics Math](metrics_explanation.md): 2D block-chunking algorithm and exact evaluation math.
+* [Recall@K Metrics Math](metrics_explanation.md): 2D block-chunking algorithm, MRR, mAP, and NDCG formulations.
+* [Docker & Cloud Deployment](docker.md): Multi-service orchestration with Redis and Elasticsearch.

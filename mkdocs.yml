@@ -54,6 +54,7 @@ markdown_extensions:
 
 extra_css:
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css
+  - stylesheets/extra.css
 
 extra_javascript:
   - javascripts/katex.js
@@ -63,6 +64,7 @@ extra_javascript:
 nav:
   - Overview: index.md
   - System Architecture: architecture.md
+  - REST API Reference: api.md
   - Matryoshka Compression (MRL): matryoshka_mrl.md
   - Data Pipeline & Clustering: data_pipeline.md
   - Contrastive Fine-Tuning: fine_tuning.md

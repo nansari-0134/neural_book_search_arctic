@@ -15,20 +15,18 @@
 ## 📌 Table of Contents
 1. [⚡ Quick Start (< 2 Minutes)](#-quick-start--2-minutes)
 2. [🌐 REST API Reference](#-rest-api-reference)
-3. [🏛️ System Architecture & Workflow](#️-system-architecture--workflow)
-4. [🔍 Step-by-Step Query Execution Lifecycle](#-step-by-step-query-execution-lifecycle)
-5. [🏆 Empirical Benchmarks & Performance Progression](#-empirical-benchmarks--performance-progression)
-6. [📐 Evaluation Metrics Guide (MRR, mAP, NDCG, Recall)](#-evaluation-metrics-guide)
-7. [🧠 Core Techniques & Why They Were Used](#-core-techniques--why-they-were-used)
-8. [🤗 Hugging Face Model Upload Guide](#-hugging-face-model-upload-guide)
-9. [📂 Repository Structure](#-repository-structure)
-10. [👤 Author & License](#-author--license)
+3. [🏛️ System Architecture](#️-system-architecture)
+4. [🔄 Query Execution Lifecycle](#-query-execution-lifecycle)
+5. [🏆 Benchmark Results](#-benchmark-results)
+6. [🧠 Core Techniques & Why They Were Used](#-core-techniques--why-they-were-used)
+7. [📂 Repository Structure](#-repository-structure)
+8. [👤 Author & License](#-author--license)
 
 ---
 
 ## ⚡ Quick Start (< 2 Minutes)
 
-You can launch the complete search platform using either Docker (recommended) or a local Python environment.
+Launch the complete search platform using either Docker (recommended) or a local Python environment.
 
 ### Option A: 1-Command Docker Launch (Recommended)
 
@@ -44,7 +42,7 @@ docker compose up -d
 docker compose -f docker-compose.cpu.yml up -d
 ```
 
-Open your browser at **`http://localhost:8080`** for the web application, or visit **`http://localhost:8080/docs`** for interactive Swagger API documentation.
+Open your browser at **`http://localhost:8080`** for the interactive web UI, or visit **`http://localhost:8080/docs`** for interactive Swagger REST API documentation.
 
 ---
 
@@ -62,21 +60,21 @@ uvicorn app.app:app --host 0.0.0.0 --port 8080
 
 ## 🌐 REST API Reference
 
-ArcticDense provides high-performance RESTful JSON endpoints for search, system statistics, and health monitoring.
+ArcticDense provides high-performance RESTful JSON endpoints for search, system statistics, and container readiness probes.
 
-### 1. `GET /api/search` or `POST /api/search`
+### 1. `GET /api/search` & `POST /api/search`
 
 Executes semantic, lexical, or hybrid search with optional Matryoshka dimension truncation and Stage 2 Cross-Encoder reranking.
 
-#### Request Parameters (Query String or JSON Body)
+#### Request Parameters (URL Query String or JSON Body)
 
 | Parameter | Type | Default | Description |
 | :--- | :---: | :---: | :--- |
-| `q` | `string` | *Required* | Natural language search query (e.g. `"cyberpunk detective AI conspiracy"`) |
+| `q` | `string` | *Required* | Natural language query (e.g. `"cyberpunk detective AI conspiracy"`) |
 | `dim` | `int` | `768` | Matryoshka MRL dimension (`64`, `128`, `256`, `512`, `768`) |
-| `top_k` | `int` | `10` | Number of ranked books to return (1 to 50) |
+| `top_k` | `int` | `10` | Number of ranked books to return (range: 1 to 50) |
 | `rerank` | `bool` | `false` | Enable Stage 2 Cross-Encoder precision reranking over Top 50 candidates |
-| `mode` | `string` | `"hybrid"` | Retrieval mode: `"hybrid"` (Dense + BM25 via RRF), `"dense"` (Arctic only), or `"lexical"` (BM25 only) |
+| `mode` | `string` | `"hybrid"` | Search mode: `"hybrid"` (Dense + BM25 via RRF), `"dense"`, or `"lexical"` |
 | `genre` | `string` | `null` | Optional genre / shelf filter (e.g. `"science-fiction"`, `"fantasy"`, `"mystery"`) |
 
 #### Example: `cURL` GET Request
@@ -151,7 +149,7 @@ for b in results["results"]:
 ---
 
 ### 2. `GET /api/health`
-Returns immediate container and index health:
+Returns container and catalog index readiness status:
 ```bash
 curl http://localhost:8080/api/health
 ```
@@ -166,7 +164,7 @@ curl http://localhost:8080/api/health
 ---
 
 ### 3. `GET /api/stats`
-Returns system status, active hardware device, MRL dimensions, and cache metrics:
+Returns system status, active compute device, MRL dimensions, and cache metrics:
 ```bash
 curl http://localhost:8080/api/stats
 ```
@@ -195,7 +193,7 @@ curl http://localhost:8080/api/stats
 
 ---
 
-## 🏛️ System Architecture & Workflow
+## 🏛️ System Architecture
 
 ArcticDense uses a **Two-Stage Retrieval Cascade** with hybrid lexical-semantic fusion and sub-millisecond RAM caching:
 
@@ -212,7 +210,7 @@ flowchart TD
         ES["Elasticsearch Cluster (BM25)<br>Multi-Field Lexical Search<br>(title^3.0, author^2.0, genres^1.5)"]
     end
     
-    Arctic --> RRF["3. Reciprocal Rank Fusion (RRF)<br>RRF(d) = sum 1 / (60 + rank(d))"]
+    Arctic --> RRF["3. Reciprocal Rank Fusion (RRF)<br>score(d) = sum 1 / (60 + rank(d))"]
     ES --> RRF
     
     RRF --> Candidates["Top-50 Fused Candidates"]
@@ -229,132 +227,92 @@ flowchart TD
 
 ---
 
-## 🔍 Step-by-Step Query Execution Lifecycle
+## 🔄 Query Execution Lifecycle
 
-When a query arrives at the system, it traverses the following 7 steps:
+The diagram below details the exact query processing pipeline from HTTP request arrival to response delivery:
 
-1. **Step 1: In-Memory Cache Verification (`< 1ms`)**:
-   The engine computes a deterministic SHA256 hash of `(query, dim, rerank, mode, genre)`. If present in Redis, the cached JSON response is returned immediately.
-2. **Step 2: Multi-Modal Candidate Retrieval (`~10–12ms`)**:
-   - **Dense Semantic Stream**: The query is prepended with the asymmetric retrieval prompt (`"Represent this sentence for searching relevant passages: "`) and encoded into a 768-d unit vector. A matrix dot-product is evaluated against the 64,552 catalog embeddings.
-   - **Lexical BM25 Stream**: In parallel, Elasticsearch searches indexed text with field boosts (`title^3.0`, `author^2.0`, `genres^1.5`, `description^1.0`).
-3. **Step 3: Reciprocal Rank Fusion (RRF)**:
-   The two ranked candidate streams are merged using RRF ($k=60$):
-   $$\text{RRF}(d) = \frac{1}{60 + \text{rank}_{\text{dense}}(d)} + \frac{1}{60 + \text{rank}_{\text{BM25}}(d)}$$
-4. **Step 4: Cross-Encoder Precision Reranking (`~160–170ms`)**:
-   The top 50 fused candidates are paired with the query as joint sequences (`[CLS] Query [SEP] Book Description [SEP]`) and evaluated by Jina Reranker v2 with full token-to-token cross-attention.
-5. **Step 5: Hybrid Cascade Fusion**:
-   Dense vector similarity and Cross-Encoder probabilities are blended:
-   $$\text{Score}_{\text{final}} = 0.30 \cdot \text{Dense}_{\text{normalized}} + 0.70 \cdot \text{CrossEncoder}_{\text{prob}}$$
-6. **Step 6: Metadata Enrichment**:
-   Book IDs are matched against `books_metadata.sqlite3` to pull title, genres, popular shelves, full synopsis, and average rating.
-7. **Step 7: Cache Population & Delivery**:
-   The payload is written to Redis with a 1-hour TTL and delivered to the client.
+```mermaid
+flowchart TD
+    Req["Incoming HTTP Request: /api/search?q=query&dim=768&rerank=true"] --> Step1["Step 1: Redis Cache Lookup"]
+    
+    Step1 --> HitCheck{"Cache Hit?"}
+    HitCheck -- "Yes (< 1ms)" --> CacheResp["Return Cached JSON Results"]
+    
+    HitCheck -- "No (Cache Miss)" --> Step2["Step 2: Parallel Stage 1 Candidate Generation"]
+    
+    subgraph S1 ["Stage 1: Candidate Generation (~11ms)"]
+        Dense["Dense Stream: Snowflake Arctic Embed (109M)<br>Asymmetric Prompt + MRL Dot-Product Matrix Search"]
+        Lexical["Lexical Stream: Elasticsearch BM25<br>Multi-Field Match: Title (3x), Author (2x), Genres (1.5x)"]
+    end
+    
+    Step2 --> Dense
+    Step2 --> Lexical
+    
+    Dense --> Step3["Step 3: Reciprocal Rank Fusion (RRF)<br>Merge Dense & BM25 Candidates into Top 50"]
+    Lexical --> Step3
+    
+    Step3 --> RerankCheck{"Reranking Enabled?"}
+    
+    RerankCheck -- "Yes (rerank=true)" --> Step4["Step 4: Stage 2 Cross-Encoder Reranking<br>Jina Reranker v2 (278M Joint Token-to-Token Attention)"]
+    Step4 --> Step5["Step 5: Hybrid Cascade Fusion<br>Blend: 0.30 Dense Similarity + 0.70 Reranker Probability"]
+    
+    RerankCheck -- "No (rerank=false)" --> DirectTop["Direct Stage 1 Candidate Selection"]
+    
+    Step5 --> Step6["Step 6: SQLite Metadata Enrichment<br>Fetch Book Title, Author, Shelves, Synopsis, Rating"]
+    DirectTop --> Step6
+    
+    Step6 --> Step7["Step 7: Redis Cache Population<br>Store JSON Payload in Redis (TTL: 1 Hour)"]
+    Step7 --> FinalResp["Deliver Ranked JSON Response to Client"]
+```
 
 ---
 
-## 🏆 Empirical Benchmarks & Performance Progression
+## 🏆 Benchmark Results
 
 All models were evaluated across the entire **64,552 Goodreads book catalog** over **32,170 test queries** and **32,340 validation queries** (100% work-clustered, zero edition leakage):
 
-### Comprehensive Benchmark Table
-
-| Model Stage | Recall@1 | Recall@5 | Recall@10 | Recall@50 | MRR@10 | mAP@10 | NDCG@10 | Mean Latency | Model Weights |
+| Pipeline Stage | Recall@1 | Recall@5 | Recall@10 | Recall@50 | MRR@10 | mAP@10 | NDCG@10 | Mean Latency | Model Weights |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Stage 1: Pretrained Baseline (Zero-Shot)** | 21.67% | 48.41% | 55.40% | 69.57% | 0.3082 | 0.3082 | 0.3642 | 11.2 ms | 438 MB |
-| **Stage 2: In-Batch Contrastive Training** | 29.16% | 58.29% | 64.67% | 78.20% | 0.3951 | 0.3951 | 0.4538 | 11.2 ms | 438 MB |
-| **Stage 3: Targeted Hard-Negative Training** | 35.60% | 68.09% | 73.96% | 84.66% | 0.4688 | 0.4688 | 0.5322 | 11.2 ms | 438 MB |
+| **Stage 1: Baseline Zero-Shot** | 21.67% | 48.41% | 55.40% | 69.57% | 0.3082 | 0.3082 | 0.3642 | 11.2 ms | 438 MB |
+| **Stage 2: In-Batch Training** | 29.16% | 58.29% | 64.67% | 78.20% | 0.3951 | 0.3951 | 0.4538 | 11.2 ms | 438 MB |
+| **Stage 3: Targeted Hard-Negative** | 35.60% | 68.09% | 73.96% | 84.66% | 0.4688 | 0.4688 | 0.5322 | 11.2 ms | 438 MB |
 | **Stage 4: Progressive Refinement (Champion Retriever)** | **35.48%** | **68.50%** | **74.70%** | **85.51%** | **0.4725** | **0.4725** | **0.5369** | **11.2 ms** | **438 MB** |
-| **Stage 7: Pointwise Jina Fine-Tuning (BCE)** | 48.10% | 65.80% | 72.40% | 83.10% | 0.5540 | 0.5540 | 0.6120 | 170.5 ms | 557 MB |
-| **Stage 8: Contrastive InfoNCE Jina Fine-Tuning** | 49.00% | 66.40% | 73.80% | 83.10% | 0.5668 | 0.5668 | 0.6241 | 171.4 ms | 557 MB |
+| **Stage 7: Pointwise Jina BCE** | 48.10% | 65.80% | 72.40% | 83.10% | 0.5540 | 0.5540 | 0.6120 | 170.5 ms | 557 MB |
+| **Stage 8: Contrastive Jina InfoNCE** | 49.00% | 66.40% | 73.80% | 83.10% | 0.5668 | 0.5668 | 0.6241 | 171.4 ms | 557 MB |
 | **Two-Stage Cascade Fusion (0.30 Dense + 0.70 Jina)** | **52.50%** | **70.50%** | **75.00%** | **83.10%** | **0.6001** | **0.6001** | **0.6485** | **182.8 ms** | **995 MB** |
 
 > **Net Gains Across Pipeline**:
 > * **Recall@1**: **21.67% $\rightarrow$ 52.50% (+30.83% absolute / +142.3% relative)**
 > * **Recall@10**: **55.40% $\rightarrow$ 75.00% (+19.60% absolute / +35.4% relative)**
 > * **MRR@10**: **0.3082 $\rightarrow$ 0.6001 (+0.2919 / +94.7% relative)**
+> * **NDCG@10**: **0.3642 $\rightarrow$ 0.6485 (+0.2843 / +78.1% relative)**
 
----
-
-## 📐 Evaluation Metrics Guide
-
-Information retrieval and recommendation systems require a multi-dimensional set of metrics to capture both breadth (recall) and ordering quality (precision and rank discount):
-
-### 1. Recall@K (Recall at K)
-* **What it measures**: The percentage of queries where the true relevant document is present somewhere in the top $K$ retrieved candidates.
-* **Why it matters**: Stage 1 retriever quality is dictated by Recall@50. If the relevant book is not in the top 50, the Stage 2 reranker never sees it.
-
-### 2. MRR (Mean Reciprocal Rank / MRR@10)
-* **What it measures**: How close to rank 1 the first relevant document appears:
-  $$\text{MRR} = \frac{1}{|Q|} \sum_{i=1}^{|Q|} \frac{1}{\text{rank}_i}$$
-* **Why it matters**: If a correct book is at rank 1, reciprocal rank is $1.0$; at rank 2, it is $0.5$; at rank 10, it is $0.1$. MRR directly reflects user satisfaction because users rarely look past the first 3 results.
-
-### 3. mAP (Mean Average Precision / MAP@K)
-* **What it measures**: The mean of average precision scores across all queries:
-  $$\text{MAP} = \frac{1}{|Q|} \sum_{q=1}^{|Q|} \text{AP}(q)$$
-* **Relationship to MRR**: In single-ground-truth evaluations (where each query has 1 target book), **mAP@K is mathematically equivalent to MRR@K**. When queries have multiple relevant items, mAP evaluates how well all items are clustered near the top.
-
-### 4. NDCG@K (Normalized Discounted Cumulative Gain)
-* **What it measures**: Evaluates ranking quality by applying a logarithmic discount factor based on position:
-  $$\text{DCG}@K = \sum_{i=1}^K \frac{2^{\text{rel}_i} - 1}{\log_2(i + 1)}, \quad \text{NDCG}@K = \frac{\text{DCG}@K}{\text{IDCG}@K}$$
-* **Why it matters**: NDCG is the gold standard across Google, Bing, and Amazon Search because placing a relevant result at rank 2 instead of rank 1 receives a gentle penalty, whereas dropping it to rank 10 receives a severe penalty.
-
-### 5. Latency & Compression Retention (MRL)
-* Measures the millisecond response time and accuracy retained when compressing vectors from 768-d down to 256-d (retaining **99.30% of Recall@10** at 3x compression).
+*For in-depth mathematical formulations of MRR, mAP, and NDCG, see the technical documentation in [`docs/metrics_explanation.md`](docs/metrics_explanation.md).*
 
 ---
 
 ## 🧠 Core Techniques & Why They Were Used
 
 1. **Asymmetric Instruction Tuning**:
-   Queries and book passages have different length and style distributions. Prepending `"Represent this sentence for searching relevant passages: "` guides the encoder's self-attention to project queries into document passage space.
-2. **Matryoshka Representation Learning (MRL)**:
-   Trained with loss gradients evaluated at sub-dimensions $\{64, 128, 256, 512, 768\}$. This packs high-level semantics into the first 256 dimensions, enabling **3x RAM reduction and 3x dot-product speedup** with $< 1\%$ drop in Recall@10.
+   Queries are short search phrases; books are rich multi-sentence descriptions. Prepending `"Represent this sentence for searching relevant passages: "` guides the transformer's attention to project queries into the document passage subspace.
+2. **Matryoshka MRL (64D–768D)**:
+   Trained with loss gradients evaluated at sub-dimensions $\{64, 128, 256, 512, 768\}$, packing core genre and thematic semantics into the first 256 dimensions. Allows **3x memory and speed reduction with $< 1\%$ drop in Recall@10**.
 3. **8-Layer False-Negative Defense Shield**:
-   Mining hard negatives from the model's confusion zone (Ranks 2–35) risks mining alternate editions, translations, sequels, or series siblings. The shield filters:
+   Mining hard negatives from the model's confusion zone (Ranks 2–35) risks mining alternate editions, translations, sequels, or series siblings. The shield filters out:
    - Same `work_id` or banned IDs
    - High cosine similarity ceiling ($> 0.88$)
    - Exact and stripped subtitle title matches
    - Content word overlap ($\ge 65\%$)
    - Series regex and author shelf tag matches
    - Negative frequency caps ($> 30$)
-4. **VRAM Cliff Fix (Sub-Batch Negative Chunking)**:
-   Encoding 16 queries + 16 positive books + 80 adversarial hard negatives (112 sequences $\times$ 512 tokens) caused 9.7 GB activation peaks, overflowing 6 GB VRAM GPUs into slow PCIe RAM paging (26.3s/step). Sub-batch chunking (`chunk_size=12`) eliminated thrashing and reduced latency to **0.49s/step (55x speedup)**.
+4. **Sub-Batch Negative Chunking**:
+   Avoided 9.7 GB VRAM peaks on 6GB GPUs by chunking negative forward-backward passes (`chunk_size=12`), collapsing step latency from 26.3s to 0.49s (**55x speedup**).
 5. **Listwise InfoNCE Contrastive Fine-Tuning**:
-   Pits the positive book against 5 hard negatives in a shared softmax competition, directly optimizing the model to prevent ranking inversions.
+   Pits the positive book against 5 hard negatives in a shared competition, directly optimizing the model to eliminate ranking inversions.
 6. **Reciprocal Rank Fusion (RRF)**:
-   Robustly fuses lexical BM25 and dense vector candidate ranks without needing score normalization across different score scales.
-
----
-
-## 🤗 Hugging Face Model Upload Guide
-
-ArcticDense includes a dedicated upload script ([`tools/upload_to_hf.py`](file:///c:/Users/Shilpa/OneDrive/Documents/Book%20Semantic%20Search/neural_book_search_arctic/tools/upload_to_hf.py)) that validates model files, auto-generates rich model cards with performance tables, and uploads checkpoints to the Hugging Face Hub.
-
-### Step 1: Authenticate with Hugging Face
-```bash
-pip install huggingface_hub
-huggingface-cli login
-```
-
-### Step 2: Upload Fine-Tuned Models
-
-```bash
-# Upload the Stage 4 Champion Retriever:
-python tools/upload_to_hf.py --model retriever --repo-id "YOUR_USERNAME/arctic-embed-m-goodreads"
-
-# Upload the Jina Contrastive Reranker:
-python tools/upload_to_hf.py --model reranker --repo-id "YOUR_USERNAME/jina-reranker-v2-goodreads"
-
-# OR upload both models automatically under your username:
-python tools/upload_to_hf.py --model both --prefix "YOUR_USERNAME"
-```
-
-Once uploaded, anyone can load and run your models with standard `sentence-transformers`:
-```python
-from sentence_transformers import SentenceTransformer
-model = SentenceTransformer("YOUR_USERNAME/arctic-embed-m-goodreads")
-```
+   Robustly fuses lexical BM25 and dense vector candidate ranks without requiring score normalization across different score distributions.
+7. **Redis RAM Caching**:
+   Caches query results with SHA256 hashing. Repeat queries return in **$< 1\text{ms}$**, bypassing neural inference and disk reads entirely.
 
 ---
 
