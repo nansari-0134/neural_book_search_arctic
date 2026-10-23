@@ -1,0 +1,1624 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Production-grade dense vector book retrieval with Snowflake Arctic Embed (v1.5), contrastive learning, and iterative negative mining.">
+      
+      
+        <meta name="author" content="Nizam">
+      
+      
+      
+        <link rel="prev" href="../iterative_mining/">
+      
+      
+        <link rel="next" href="../metrics_explanation/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Benchmark Progression - ArcticDense: Neural Book Retriever</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#benchmark-progression-empirical-results" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ArcticDense: Neural Book Retriever" class="md-header__button md-logo" aria-label="ArcticDense: Neural Book Retriever" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ArcticDense: Neural Book Retriever
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Benchmark Progression
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/nansari-0134/neural_book_search_arctic" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    nansari-0134/neural_book_search_arctic
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ArcticDense: Neural Book Retriever" class="md-nav__button md-logo" aria-label="ArcticDense: Neural Book Retriever" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ArcticDense: Neural Book Retriever
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/nansari-0134/neural_book_search_arctic" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    nansari-0134/neural_book_search_arctic
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../matryoshka_mrl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Matryoshka Compression (MRL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data_pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Pipeline & Clustering
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fine_tuning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contrastive Fine-Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iterative_mining/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Iterative Negative Mining
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark Progression
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmark Progression
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#comprehensive-results-progression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Comprehensive Results Progression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-catalog-evaluation-comparison-64552-books" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏆 Full-Catalog Evaluation Comparison (64,552 Books)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-2-training-telemetry-in-batch-contrastive-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 2 Training Telemetry (In-Batch Contrastive Training)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Stage 2 Training Telemetry (In-Batch Contrastive Training)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loss-milestones-during-stage-2-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loss Milestones During Stage 2 Training
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-3-training-telemetry-targeted-hard-negative-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 3 Training Telemetry (Targeted Hard-Negative Training)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-4-training-telemetry-progressive-refinement-champion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 4 Training Telemetry (Progressive Refinement - Champion)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-protocol-recall-math" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Evaluation Protocol &amp; Recall Math
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-saturation-of-the-bi-encoder-transition-to-cross-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔬 Architectural Saturation of the Bi-Encoder &amp; Transition to Cross-Encoder
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔬 Architectural Saturation of the Bi-Encoder &amp; Transition to Cross-Encoder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-the-vector-representation-bottleneck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The Vector Representation Bottleneck
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-empirical-plateau-diminishing-marginal-returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Empirical Plateau &amp; Diminishing Marginal Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-the-risk-of-continued-bi-encoder-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. The Risk of Continued Bi-Encoder Training
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-high-candidate-recall-vs-rank-1-precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. High Candidate Recall vs. Rank-1 Precision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-the-solution-two-stage-retrieval-with-a-cross-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The Solution: Two-Stage Retrieval with a Cross-Encoder
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-5-empirical-two-stage-cascade-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 5: Empirical Two-Stage Cascade Benchmark
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Stage 5: Empirical Two-Stage Cascade Benchmark">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-machine-learning-findings-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔍 Key Machine Learning Findings &amp; Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-6-empirical-matryoshka-dimensional-benchmark-64552-books" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🪆 Stage 6: Empirical Matryoshka Dimensional Benchmark (64,552 Books)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🪆 Stage 6: Empirical Matryoshka Dimensional Benchmark (64,552 Books)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architectural-insights-on-matryoshka-representation-learning-mrl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Architectural Insights on Matryoshka Representation Learning (MRL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metrics_explanation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recall@K Metrics Math
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#comprehensive-results-progression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Comprehensive Results Progression
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-catalog-evaluation-comparison-64552-books" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏆 Full-Catalog Evaluation Comparison (64,552 Books)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-2-training-telemetry-in-batch-contrastive-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 2 Training Telemetry (In-Batch Contrastive Training)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Stage 2 Training Telemetry (In-Batch Contrastive Training)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#loss-milestones-during-stage-2-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Loss Milestones During Stage 2 Training
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-3-training-telemetry-targeted-hard-negative-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 3 Training Telemetry (Targeted Hard-Negative Training)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-4-training-telemetry-progressive-refinement-champion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 4 Training Telemetry (Progressive Refinement - Champion)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-protocol-recall-math" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Evaluation Protocol &amp; Recall Math
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-saturation-of-the-bi-encoder-transition-to-cross-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔬 Architectural Saturation of the Bi-Encoder &amp; Transition to Cross-Encoder
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔬 Architectural Saturation of the Bi-Encoder &amp; Transition to Cross-Encoder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-the-vector-representation-bottleneck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The Vector Representation Bottleneck
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-empirical-plateau-diminishing-marginal-returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Empirical Plateau &amp; Diminishing Marginal Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-the-risk-of-continued-bi-encoder-training" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. The Risk of Continued Bi-Encoder Training
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-high-candidate-recall-vs-rank-1-precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. High Candidate Recall vs. Rank-1 Precision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-the-solution-two-stage-retrieval-with-a-cross-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The Solution: Two-Stage Retrieval with a Cross-Encoder
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-5-empirical-two-stage-cascade-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 5: Empirical Two-Stage Cascade Benchmark
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Stage 5: Empirical Two-Stage Cascade Benchmark">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-machine-learning-findings-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔍 Key Machine Learning Findings &amp; Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-6-empirical-matryoshka-dimensional-benchmark-64552-books" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🪆 Stage 6: Empirical Matryoshka Dimensional Benchmark (64,552 Books)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🪆 Stage 6: Empirical Matryoshka Dimensional Benchmark (64,552 Books)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architectural-insights-on-matryoshka-representation-learning-mrl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Architectural Insights on Matryoshka Representation Learning (MRL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="benchmark-progression-empirical-results">📈 Benchmark Progression &amp; Empirical Results</h1>
+<p>This document tracks empirical retrieval metrics across all training stages on the <strong>64,552 book catalog</strong> evaluated over <strong>32,170 test queries</strong> and <strong>32,340 validation queries</strong> (100% work-clustered, zero edition contamination).</p>
+<hr />
+<h2 id="comprehensive-results-progression">📊 Comprehensive Results Progression</h2>
+<pre class="mermaid"><code>graph LR
+    subgraph S1 ["Stage 1: Pretrained Baseline"]
+        B1["R@1: 21.67%"]
+        B5["R@5: 48.41%"]
+        B10["R@10: 55.40%"]
+        B50["R@50: 69.57%"]
+    end
+    subgraph S2 ["Stage 2: In-Batch Training"]
+        P1["R@1: 29.16% (+7.49%)"]
+        P5["R@5: 58.29% (+9.88%)"]
+        P10["R@10: 64.67% (+9.27%)"]
+        P50["R@50: 78.20% (+8.63%)"]
+    end
+    subgraph S3 ["Stage 3: Targeted Hard Negatives"]
+        C1["R@1: 35.60% (+13.93%)"]
+        C5["R@5: 68.09% (+19.68%)"]
+        C10["R@10: 73.96% (+18.56%)"]
+        C50["R@50: 84.66% (+15.09%)"]
+    end
+    subgraph S4 ["Stage 4: Progressive Refinement"]
+        C2_1["R@1: 35.48% (+13.81%)"]
+        C2_5["R@5: 68.50% (+20.09%)"]
+        C2_10["R@10: 74.70% (+19.30%)"]
+        C2_50["R@50: 85.51% (+15.94%)"]
+    end
+    S1 --&gt; S2 --&gt; S3 --&gt; S4</code></pre>
+<hr />
+<h2 id="full-catalog-evaluation-comparison-64552-books">🏆 Full-Catalog Evaluation Comparison (64,552 Books)</h2>
+<p>All evaluations search across the <strong>entire 64,552-book catalog</strong> in exact rank order using GPU 2D block-chunking:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Evaluation Split</th>
+<th style="text-align: left;">Model Stage</th>
+<th style="text-align: center;">Recall@1</th>
+<th style="text-align: center;">Recall@5</th>
+<th style="text-align: center;">Recall@10</th>
+<th style="text-align: center;">Recall@50</th>
+<th style="text-align: center;">Delta vs Baseline</th>
+<th style="text-align: center;">Relative Gain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Test Set</strong><br><em>(32,170 queries)</em></td>
+<td style="text-align: left;"><strong>Stage 1: Pretrained Baseline</strong></td>
+<td style="text-align: center;">21.67%</td>
+<td style="text-align: center;">48.41%</td>
+<td style="text-align: center;">55.40%</td>
+<td style="text-align: center;">69.57%</td>
+<td style="text-align: center;"><em>Starting Point</em></td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>Stage 2: In-Batch Training</strong></td>
+<td style="text-align: center;">29.16%</td>
+<td style="text-align: center;">58.29%</td>
+<td style="text-align: center;">64.67%</td>
+<td style="text-align: center;">78.20%</td>
+<td style="text-align: center;">:rocket: <strong>+7.49% R@1, +9.27% R@10</strong></td>
+<td style="text-align: center;">+16.7%</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>Stage 3: Targeted Hard Negatives</strong></td>
+<td style="text-align: center;">35.60%</td>
+<td style="text-align: center;">68.09%</td>
+<td style="text-align: center;">73.96%</td>
+<td style="text-align: center;">84.66%</td>
+<td style="text-align: center;">🌟 <strong>+13.93% R@1, +18.56% R@10</strong></td>
+<td style="text-align: center;">+33.5%</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>Stage 4: Progressive Refinement (Champion)</strong></td>
+<td style="text-align: center;"><strong>35.48%</strong></td>
+<td style="text-align: center;"><strong>68.50%</strong></td>
+<td style="text-align: center;"><strong>74.70%</strong></td>
+<td style="text-align: center;"><strong>85.51%</strong></td>
+<td style="text-align: center;">👑 <strong>+13.81% R@1, +19.30% R@10</strong></td>
+<td style="text-align: center;"><strong>+34.8%</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Validation Set</strong><br><em>(32,340 queries)</em></td>
+<td style="text-align: left;"><strong>Stage 1: Pretrained Baseline</strong></td>
+<td style="text-align: center;">22.24%</td>
+<td style="text-align: center;">49.02%</td>
+<td style="text-align: center;">55.43%</td>
+<td style="text-align: center;">69.41%</td>
+<td style="text-align: center;"><em>Starting Point</em></td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>Stage 2: In-Batch Training</strong></td>
+<td style="text-align: center;">29.86%</td>
+<td style="text-align: center;">59.55%</td>
+<td style="text-align: center;">65.70%</td>
+<td style="text-align: center;">78.36%</td>
+<td style="text-align: center;">:rocket: <strong>+7.62% R@1, +10.27% R@10</strong></td>
+<td style="text-align: center;">+18.5%</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>Stage 3: Targeted Hard Negatives</strong></td>
+<td style="text-align: center;">36.01%</td>
+<td style="text-align: center;">68.78%</td>
+<td style="text-align: center;">74.41%</td>
+<td style="text-align: center;">84.84%</td>
+<td style="text-align: center;">🌟 <strong>+13.77% R@1, +18.98% R@10</strong></td>
+<td style="text-align: center;">+34.2%</td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>Stage 4: Progressive Refinement (Champion)</strong></td>
+<td style="text-align: center;"><strong>36.39%</strong></td>
+<td style="text-align: center;"><strong>69.51%</strong></td>
+<td style="text-align: center;"><strong>75.04%</strong></td>
+<td style="text-align: center;"><strong>85.65%</strong></td>
+<td style="text-align: center;">👑 <strong>+14.15% R@1, +19.61% R@10</strong></td>
+<td style="text-align: center;"><strong>+35.4%</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="stage-2-training-telemetry-in-batch-contrastive-training">⚡ Stage 2 Training Telemetry (In-Batch Contrastive Training)</h2>
+<p>Executed on a single consumer laptop GPU (<strong>NVIDIA GeForce RTX 4050 6GB VRAM</strong>):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Hyperparameter / Metric</th>
+<th style="text-align: left;">Observed Value</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Dataset Size</strong></td>
+<td style="text-align: left;"><strong>258,250 pairs</strong></td>
+<td style="text-align: left;">51,650 training books <span class="arithmatex">\(\times\)</span> 5 synthetic queries</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Total Steps</strong></td>
+<td style="text-align: left;"><strong>16,141 steps</strong></td>
+<td style="text-align: left;">1 full epoch with batch size 16 and grad accum 2 (eff. batch 32)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Time</strong></td>
+<td style="text-align: left;"><strong>761.2 minutes (~12.7 hours)</strong></td>
+<td style="text-align: left;">Average step latency: ~2.4 seconds</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Loss Trajectory</strong></td>
+<td style="text-align: left;"><strong><code>1.7508</code> <span class="arithmatex">\(\rightarrow\)</span> <code>0.6073</code></strong></td>
+<td style="text-align: left;">Stable monotonic decline without spikes</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Peak Learning Rate</strong></td>
+<td style="text-align: left;"><strong><code>1.50e-05</code></strong></td>
+<td style="text-align: left;">Linear warmup (807 steps) + Cosine decay to <code>0.0</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>VRAM Footprint</strong></td>
+<td style="text-align: left;"><strong>5,879 MiB / 6,141 MiB</strong></td>
+<td style="text-align: left;">95.7% VRAM utilization with FP16 + Gradient Checkpointing</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Thermal Profile</strong></td>
+<td style="text-align: left;"><strong>74°C sustained</strong></td>
+<td style="text-align: left;">Stable power draw: 73W / 80W max</td>
+</tr>
+</tbody>
+</table>
+<h3 id="loss-milestones-during-stage-2-training">Loss Milestones During Stage 2 Training</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Training Progress</th>
+<th style="text-align: center;">Optimizer Step</th>
+<th style="text-align: center;">Recorded MNRL Loss</th>
+<th style="text-align: center;">Learning Rate</th>
+<th style="text-align: center;">Elapsed Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>0.3%</strong></td>
+<td style="text-align: center;">Step 50 / 16,141</td>
+<td style="text-align: center;"><strong>1.7508</strong></td>
+<td style="text-align: center;"><span class="arithmatex">\(4.65 \times 10^{-7}\)</span></td>
+<td style="text-align: center;">1.9 min</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>12.4%</strong></td>
+<td style="text-align: center;">Step 2,000 / 16,141</td>
+<td style="text-align: center;"><strong>1.2842</strong></td>
+<td style="text-align: center;"><span class="arithmatex">\(1.48 \times 10^{-5}\)</span></td>
+<td style="text-align: center;">94.2 min</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>24.8%</strong></td>
+<td style="text-align: center;">Step 4,000 / 16,141</td>
+<td style="text-align: center;"><strong>1.0519</strong></td>
+<td style="text-align: center;"><span class="arithmatex">\(1.39 \times 10^{-5}\)</span></td>
+<td style="text-align: center;">188.5 min</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>49.6%</strong></td>
+<td style="text-align: center;">Step 8,000 / 16,141</td>
+<td style="text-align: center;"><strong>0.8234</strong></td>
+<td style="text-align: center;"><span class="arithmatex">\(9.82 \times 10^{-6}\)</span></td>
+<td style="text-align: center;">377.0 min</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>74.3%</strong></td>
+<td style="text-align: center;">Step 12,000 / 16,141</td>
+<td style="text-align: center;"><strong>0.6841</strong></td>
+<td style="text-align: center;"><span class="arithmatex">\(4.31 \times 10^{-6}\)</span></td>
+<td style="text-align: center;">565.8 min</td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>100.0%</strong></td>
+<td style="text-align: center;">Step 16,141 / 16,141</td>
+<td style="text-align: center;"><strong>0.6073</strong></td>
+<td style="text-align: center;"><span class="arithmatex">\(0.00\)</span></td>
+<td style="text-align: center;">761.2 min (12.7h)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="stage-3-training-telemetry-targeted-hard-negative-training">⚡ Stage 3 Training Telemetry (Targeted Hard-Negative Training)</h2>
+<p>Introduced <strong>Top-5 actively mined hard negatives per query</strong> (199,808 adversarial pairs) with sub-batch negative chunking and non-reentrant gradient checkpointing:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Hyperparameter / Metric</th>
+<th style="text-align: left;">Observed Value</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Dataset Size</strong></td>
+<td style="text-align: left;"><strong>199,808 pairs</strong></td>
+<td style="text-align: left;">5 adversarial hard negatives mined from 64,552 books</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Micro-Batch / Grad Accum</strong></td>
+<td style="text-align: left;"><strong>Batch 4 / Accum 8</strong></td>
+<td style="text-align: left;">Effective batch size: 32 (exact gradient preservation)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Total Micro-Steps</strong></td>
+<td style="text-align: left;"><strong>49,952 micro-steps</strong></td>
+<td style="text-align: left;">6,244 full optimizer steps</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Negative Chunking</strong></td>
+<td style="text-align: left;"><strong>Chunk Size: 12</strong></td>
+<td style="text-align: left;">Prevents WDDM PCIe paging thrash</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Time</strong></td>
+<td style="text-align: left;"><strong>416.7 minutes (~6.9 hours)</strong></td>
+<td style="text-align: left;">Average step latency: <strong>0.49 seconds</strong> (vs 26.3s unoptimized)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>VRAM Footprint</strong></td>
+<td style="text-align: left;"><strong>2,835 – 3,429 MiB</strong></td>
+<td style="text-align: left;">Stable 55% utilization on RTX 4050 6GB</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Thermal &amp; Power</strong></td>
+<td style="text-align: left;"><strong>74–77°C sustained</strong></td>
+<td style="text-align: left;">Stable power draw: 73W – 76W</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Final Loss</strong></td>
+<td style="text-align: left;"><strong><code>1.4070</code> <span class="arithmatex">\(\rightarrow\)</span> <code>0.5841</code></strong></td>
+<td style="text-align: left;">Strong convergence on adversarial pairs</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="stage-4-training-telemetry-progressive-refinement-champion">⚡ Stage 4 Training Telemetry (Progressive Refinement - Champion)</h2>
+<p>Refined the retriever on <strong>179,319 progressive adversarial pairs</strong> (3 fresh negatives + 2 retained negatives) warm-started from Stage 3 weights:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Hyperparameter / Metric</th>
+<th style="text-align: left;">Observed Value</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Base Model Checkpoint</strong></td>
+<td style="text-align: left;"><strong><code>arctic_v2/best_model</code></strong></td>
+<td style="text-align: left;">Warm-starts directly from Stage 3 model</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Dataset Size</strong></td>
+<td style="text-align: left;"><strong>179,319 pairs</strong></td>
+<td style="text-align: left;">Filtered from Stage 3 confusions with 8-layer shield</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Micro-Batch / Grad Accum</strong></td>
+<td style="text-align: left;"><strong>Batch 4 / Accum 8</strong></td>
+<td style="text-align: left;">Effective batch size: 32 (exact gradient preservation)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Total Micro-Steps</strong></td>
+<td style="text-align: left;"><strong>44,830 micro-steps</strong></td>
+<td style="text-align: left;">5,604 full optimizer steps</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Learning Rate</strong></td>
+<td style="text-align: left;"><strong><code>1.20e-05</code></strong></td>
+<td style="text-align: left;">Cosine decay with linear warmup (560 steps)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Execution Time</strong></td>
+<td style="text-align: left;"><strong>374.8 minutes (~6.2 hours)</strong></td>
+<td style="text-align: left;">Average step latency: <strong>0.50 seconds</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>VRAM Footprint</strong></td>
+<td style="text-align: left;"><strong>2,850 – 3,450 MiB</strong></td>
+<td style="text-align: left;">Stable 55% utilization on RTX 4050 6GB</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Thermal &amp; Power</strong></td>
+<td style="text-align: left;"><strong>72–76°C sustained</strong></td>
+<td style="text-align: left;">Stable power draw: 70W – 74W</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Loss Trajectory</strong></td>
+<td style="text-align: left;"><strong><code>1.1224</code> <span class="arithmatex">\(\rightarrow\)</span> <code>0.5312</code></strong></td>
+<td style="text-align: left;">High transfer efficiency from Stage 3 weights</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="evaluation-protocol-recall-math">🎯 Evaluation Protocol &amp; Recall Math</h2>
+<p>For any query <span class="arithmatex">\(q\)</span>, let <span class="arithmatex">\(\text{Rank}(q, d^+)\)</span> be the 1-indexed position of the ground-truth book <span class="arithmatex">\(d^+\)</span> when sorting all <span class="arithmatex">\(N = 64,552\)</span> catalog books by descending cosine similarity:</p>
+<div class="arithmatex">\[\text{Recall@K} = \frac{1}{|Q|} \sum_{q \in Q} \mathbb{I}\left(\text{Rank}(q, d^+) \le K\right)\]</div>
+<ul>
+<li><strong>Recall@1</strong>: Measures exact first-try precision. A jump from <strong>21.67% to 35.48%</strong> (+63.7% relative gain) means more than 1 in every 3 user trope queries returns the target book as the very first result.</li>
+<li><strong>Recall@10</strong>: Represents "Page 1" retrieval performance. Reaching <strong>74.70%</strong> (Validation: <strong>75.04%</strong>) ensures three out of four semantic queries place the ground truth book within the top 10 search results.</li>
+<li><strong>Recall@50</strong>: Represents candidate generation recall. At <strong>85.51%</strong> (Validation: <strong>85.65%</strong>), downstream rerankers or interactive exploration modes receive an exceptionally rich candidate pool.</li>
+</ul>
+<hr />
+<h2 id="architectural-saturation-of-the-bi-encoder-transition-to-cross-encoder">🔬 Architectural Saturation of the Bi-Encoder &amp; Transition to Cross-Encoder</h2>
+<p>A natural question arises when analyzing the plateau between Stage 3 (<strong>35.60% R@1, 73.96% R@10</strong>) and Stage 4 (<strong>35.48% R@1, 74.70% R@10</strong>): <strong>Why not continue training the dense retriever for additional epochs or cycles?</strong></p>
+<p>The decision to conclude bi-encoder fine-tuning at Stage 4 (Progressive Refinement) and transition to a <strong>Cross-Encoder reranker</strong> is grounded in deep information-retrieval theory and empirical observations:</p>
+<pre class="mermaid"><code>graph TD
+    subgraph Bottleneck ["1. Bi-Encoder Information Bottleneck"]
+        QD["500-word Book Synopsis"] --&gt;|Independent Compression| VD["768-d Vector"]
+        QU["15-word Search Query"] --&gt;|Independent Compression| VQ["768-d Vector"]
+        VD &amp; VQ --&gt; DotProd["Dot Product (No Token-Level Cross-Attention)"]
+    end
+
+    subgraph Solution ["2. Two-Stage Retrieval Paradigm"]
+        Cat["64,552 Books"] --&gt;|Stage 1: Arctic Retriever (15ms)| Top50["Top 50 Candidates (Recall@50: 85.51%)"]
+        Top50 --&gt;|Stage 2: Cross-Encoder Reranker (45ms)| ReRank["Full Token-to-Token Cross-Attention"]
+        ReRank --&gt; FinalTop10["Precision Top 10 (Target Recall@1: 55-65%+)"]
+    end</code></pre>
+<h3 id="1-the-vector-representation-bottleneck">1. The Vector Representation Bottleneck</h3>
+<ul>
+<li>A dense bi-encoder compresses an entire 300–500 word book synopsis (complex plots, themes, characters, literary tone) into a <strong>single 768-dimensional vector</strong> <span class="arithmatex">\(\mathbf{d} \in \mathbb{R}^{768}\)</span> before the query is even known.</li>
+<li>Similarly, the query is mapped to a single vector <span class="arithmatex">\(\mathbf{q} \in \mathbb{R}^{768}\)</span>. Similarity is purely a static vector dot product <span class="arithmatex">\(\mathbf{q} \cdot \mathbf{d}\)</span>.</li>
+<li><strong>There is zero token-to-token cross-attention.</strong> The model cannot dynamically attend between a query constraint (e.g., <em>"unreliable narrator who is a clockmaker"</em>) and specific clauses inside the book synopsis.</li>
+</ul>
+<h3 id="2-empirical-plateau-diminishing-marginal-returns">2. Empirical Plateau &amp; Diminishing Marginal Returns</h3>
+<p>Across our 64,552-book full catalog benchmark:
+* <strong>Stage 1 <span class="arithmatex">\(\rightarrow\)</span> Stage 2</strong>: Recall@10 improved by <strong>+9.27%</strong> (from 55.40% to 64.67%).
+* <strong>Stage 2 <span class="arithmatex">\(\rightarrow\)</span> Stage 3</strong>: Recall@10 improved by <strong>+9.29%</strong> (from 64.67% to 73.96%).
+* <strong>Stage 3 <span class="arithmatex">\(\rightarrow\)</span> Stage 4</strong>: Recall@10 improved by only <strong>+0.74%</strong> (from 73.96% to 74.70%), and Recall@1 flatlined (35.60% <span class="arithmatex">\(\rightarrow\)</span> 35.48%).</p>
+<p>This flattening indicates that the Arctic 109M parameter bi-encoder has reached its structural capacity for linear dot-product partitioning on this dataset.</p>
+<h3 id="3-the-risk-of-continued-bi-encoder-training">3. The Risk of Continued Bi-Encoder Training</h3>
+<p>Continuing to push contrastive loss on the bi-encoder past this saturation point creates two severe failure modes:
+* <strong>Representation Collapse</strong>: Forcing vectors apart with increasingly obscure synthetic negatives can compress semantic sub-spaces, making the model overly brittle and damaging zero-shot query generalization.
+* <strong>Overfitting to Synthetic Query Distribution</strong>: Additional passes reward the model for memorizing phrasing artifacts of the synthetic query generation pipeline rather than learning robust literary semantics.</p>
+<h3 id="4-high-candidate-recall-vs-rank-1-precision">4. High Candidate Recall vs. Rank-1 Precision</h3>
+<p>The bi-encoder is already performing its intended role with exceptional accuracy:
+* <strong>Recall@50 is 85.51%</strong> (Validation: <strong>85.65%</strong>). In over <strong>85 out of every 100 queries</strong>, the target book is already inside the retrieved Top-50 candidate pool.
+* However, because 5 to 10 books in the catalog may share very similar tropes (e.g., five classic cyberpunk detective novels), their dot-product scores differ by mere thousandths (e.g., <code>0.784</code>, <code>0.781</code>, <code>0.779</code>). A bi-encoder cannot break these ties reliably.</p>
+<h3 id="5-the-solution-two-stage-retrieval-with-a-cross-encoder">5. The Solution: Two-Stage Retrieval with a Cross-Encoder</h3>
+<p>To evaluate whether joint cross-attention could further improve top-1 precision, we constructed a <strong>Two-Stage Retrieval Cascade</strong>:
+* <strong>Stage 1 (Arctic Bi-Encoder)</strong>: Rapid candidate generation across all 64,552 books in <strong>&lt; 10ms</strong>, filtering the catalog down to the Top 50 candidates.
+* <strong>Stage 2 (Cross-Encoder)</strong>: Takes each <code>[CLS] Query [SEP] Book Title &amp; Synopsis [SEP]</code> pair and computes full all-to-all cross-attention across all transformer layers.</p>
+<hr />
+<h2 id="stage-5-empirical-two-stage-cascade-benchmark">⚡ Stage 5: Empirical Two-Stage Cascade Benchmark</h2>
+<p>We trained a Cross-Encoder reranker (<code>cross-encoder/ms-marco-MiniLM-L-6-v2</code>, 22.7M parameters) using <strong>158,551 balanced pairs</strong> mined directly from the champion Arctic retriever, and evaluated both stages side-by-side across 1,000 test set queries over the full 64,552 book catalog:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Metric</th>
+<th style="text-align: center;">Stage 1: Arctic Bi-Encoder (109M)</th>
+<th style="text-align: center;">Stage 2: Cross-Encoder Reranker (22.7M)</th>
+<th style="text-align: center;">Delta</th>
+<th style="text-align: center;">Latency Profile</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Recall@1</strong></td>
+<td style="text-align: center;"><strong>49.00%</strong></td>
+<td style="text-align: center;">42.30%</td>
+<td style="text-align: center;">-6.70%</td>
+<td style="text-align: center;">Stage 1: <strong>8.8 ms</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recall@5</strong></td>
+<td style="text-align: center;"><strong>66.40%</strong></td>
+<td style="text-align: center;">56.60%</td>
+<td style="text-align: center;">-9.80%</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recall@10</strong></td>
+<td style="text-align: center;"><strong>71.80%</strong></td>
+<td style="text-align: center;">62.90%</td>
+<td style="text-align: center;">-8.90%</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recall@50</strong></td>
+<td style="text-align: center;"><strong>83.10%</strong></td>
+<td style="text-align: center;"><em>(Top 50 Pool)</em></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MRR@10</strong></td>
+<td style="text-align: center;"><strong>0.5681</strong></td>
+<td style="text-align: center;">0.4848</td>
+<td style="text-align: center;">-0.0834</td>
+<td style="text-align: center;">Stage 2: <strong>+77.7 ms</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Total Query Latency</strong></td>
+<td style="text-align: center;"><strong>8.8 ms</strong></td>
+<td style="text-align: center;">86.4 ms</td>
+<td style="text-align: center;">+77.6 ms</td>
+<td style="text-align: center;"><strong>9.8x Slower</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-machine-learning-findings-analysis">🔍 Key Machine Learning Findings &amp; Analysis</h3>
+<ol>
+<li><strong>The "Retriever Outstripping Reranker" Phenomenon</strong>:</li>
+<li>The fine-tuned Arctic Bi-Encoder is a <strong>109 Million parameter</strong> model that underwent extensive contrastive instruction tuning across 64,552 books and multiple rounds of hard negative mining.</li>
+<li>In contrast, the MiniLM Cross-Encoder has only <strong>22.7 Million parameters</strong> (almost <span class="arithmatex">\(5\times\)</span> smaller) and 6 layers.</li>
+<li>
+<p>In neural information retrieval, if the first-stage retriever is substantially larger and more deeply specialized than the reranker, a smaller cross-encoder can actually <strong>degrade top-rank accuracy</strong> because it lacks the representational capacity of the larger retriever.</p>
+</li>
+<li>
+<p><strong>The Power of the Standalone Arctic Retriever</strong>:</p>
+</li>
+<li>
+<p>On this test set, the standalone Arctic Bi-Encoder already achieves <strong>49.00% Recall@1</strong> and <strong>71.80% Recall@10</strong> at <strong>8.8 ms latency</strong>. Nearly 1 out of every 2 user searches lands on the exact ground-truth book at rank #1 without any secondary reranker overhead.</p>
+</li>
+<li>
+<p><strong>Production Recommendation</strong>:</p>
+</li>
+<li>The champion fine-tuned Arctic Bi-Encoder (<code>arctic_v3</code>) is the <strong>primary production engine</strong> for sub-15ms high-accuracy search.</li>
+<li>The Cross-Encoder is integrated into the web application as an <strong>interactive toggle switch (<code>⚡ Cross-Encoder Rerank</code>)</strong>, allowing users to explore and contrast both neural architectures in real time.</li>
+</ol>
+<hr />
+<h2 id="stage-6-empirical-matryoshka-dimensional-benchmark-64552-books">🪆 Stage 6: Empirical Matryoshka Dimensional Benchmark (64,552 Books)</h2>
+<p>To evaluate vector compression trade-offs under real-world conditions, we evaluated the Champion Arctic retriever across all supported Matryoshka dimensions (<span class="arithmatex">\(768\)</span>, <span class="arithmatex">\(512\)</span>, <span class="arithmatex">\(256\)</span>, <span class="arithmatex">\(128\)</span>, and <span class="arithmatex">\(64\)</span>) against all <strong>64,552 books</strong> in the catalog over <strong>1,000 test queries</strong>:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Vector Dimension</th>
+<th style="text-align: center;">Recall@1</th>
+<th style="text-align: center;">Recall@5</th>
+<th style="text-align: center;">Recall@10</th>
+<th style="text-align: center;">Recall@50</th>
+<th style="text-align: center;">MRR@10</th>
+<th style="text-align: center;">R@10 Retained</th>
+<th style="text-align: center;">RAM Footprint (FP16)</th>
+<th style="text-align: center;">Dot-Product FLOPs</th>
+<th style="text-align: center;">Speedup Factor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>768-d</strong> <em>(Full Capacity)</em></td>
+<td style="text-align: center;"><strong>49.80%</strong></td>
+<td style="text-align: center;"><strong>66.50%</strong></td>
+<td style="text-align: center;"><strong>71.90%</strong></td>
+<td style="text-align: center;"><strong>83.30%</strong></td>
+<td style="text-align: center;"><strong>0.5726</strong></td>
+<td style="text-align: center;"><strong>100.0%</strong> <em>(Baseline)</em></td>
+<td style="text-align: center;"><strong>94.6 MiB</strong></td>
+<td style="text-align: center;"><span class="arithmatex">\(99.2 \times 10^6\)</span> ops</td>
+<td style="text-align: center;"><em>Baseline (1.0x)</em></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>512-d</strong></td>
+<td style="text-align: center;">49.00%</td>
+<td style="text-align: center;">65.80%</td>
+<td style="text-align: center;">70.70%</td>
+<td style="text-align: center;">82.90%</td>
+<td style="text-align: center;">0.5624</td>
+<td style="text-align: center;"><strong>98.33%</strong></td>
+<td style="text-align: center;"><strong>63.0 MiB</strong> <em>(33% less)</em></td>
+<td style="text-align: center;"><span class="arithmatex">\(66.1 \times 10^6\)</span> ops</td>
+<td style="text-align: center;"><strong>1.5x faster</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>256-d</strong> <em>(Sweet Spot)</em></td>
+<td style="text-align: center;"><strong>48.70%</strong></td>
+<td style="text-align: center;"><strong>65.60%</strong></td>
+<td style="text-align: center;"><strong>71.40%</strong></td>
+<td style="text-align: center;"><strong>83.40%</strong></td>
+<td style="text-align: center;"><strong>0.5597</strong></td>
+<td style="text-align: center;"><strong>99.30%</strong></td>
+<td style="text-align: center;"><strong>31.5 MiB</strong> <em>(3x less)</em></td>
+<td style="text-align: center;"><span class="arithmatex">\(33.1 \times 10^6\)</span> ops</td>
+<td style="text-align: center;"><strong>3.0x faster</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>128-d</strong></td>
+<td style="text-align: center;">40.90%</td>
+<td style="text-align: center;">56.10%</td>
+<td style="text-align: center;">63.20%</td>
+<td style="text-align: center;">76.20%</td>
+<td style="text-align: center;">0.4791</td>
+<td style="text-align: center;"><strong>87.90%</strong></td>
+<td style="text-align: center;"><strong>15.8 MiB</strong> <em>(6x less)</em></td>
+<td style="text-align: center;"><span class="arithmatex">\(16.5 \times 10^6\)</span> ops</td>
+<td style="text-align: center;"><strong>6.0x faster</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"><strong>64-d</strong> <em>(Edge / Low-Power)</em></td>
+<td style="text-align: center;">27.10%</td>
+<td style="text-align: center;">40.50%</td>
+<td style="text-align: center;">46.80%</td>
+<td style="text-align: center;">60.00%</td>
+<td style="text-align: center;">0.3290</td>
+<td style="text-align: center;"><strong>65.09%</strong></td>
+<td style="text-align: center;"><strong>7.9 MiB</strong> <em>(12x less)</em></td>
+<td style="text-align: center;"><span class="arithmatex">\(8.3 \times 10^6\)</span> ops</td>
+<td style="text-align: center;"><strong>12.0x faster</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="architectural-insights-on-matryoshka-representation-learning-mrl">💡 Architectural Insights on Matryoshka Representation Learning (MRL)</h3>
+<ol>
+<li><strong>The 256-d Sweet Spot (99.30% Accuracy at 33% Cost)</strong>:</li>
+<li>Truncating from 768-d down to 256-d slashes RAM consumption by <strong>66.7%</strong> (from 94.6 MiB to 31.5 MiB) and triples matrix calculation throughput (<strong>3.0x theoretical speedup</strong>).</li>
+<li>Yet Recall@10 drops by only <strong>0.50%</strong> (from 71.90% to 71.40%), preserving <strong>99.30%</strong> of full-dimension accuracy, and MRR@10 drops from <code>0.5726</code> to <code>0.5597</code> (preserving <strong>97.75%</strong>).</li>
+<li>
+<p>Candidate pool recall (Recall@50) remains effectively identical (<strong>83.40% vs 83.30%</strong>).</p>
+</li>
+<li>
+<p><strong>Zero-Overhead Adaptive Retrieval</strong>:</p>
+</li>
+<li>Because Snowflake Arctic embeds coordinates hierarchically, switching between dimensions requires no separate models, adapters, or weight decompression—only slicing the first <span class="arithmatex">\(m\)</span> indices and applying <span class="arithmatex">\(L_2\)</span> renormalization (<code>sub_vec / norm</code>).</li>
+<li>This is implemented in the live web app via interactive dimension pills (<code>768-d</code>, <code>512-d</code>, <code>256-d</code>, <code>128-d</code>, <code>64-d</code>).</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
