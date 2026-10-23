@@ -694,6 +694,45 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#stage-7-fine-tuning-jina-reranker-v2-278m-multilingual-cross-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 7: Fine-Tuning Jina Reranker v2 (278M Multilingual Cross-Encoder)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Stage 7: Fine-Tuning Jina Reranker v2 (278M Multilingual Cross-Encoder)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#empirical-two-stage-cascade-head-to-head-comparison-64552-books-1000-test-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Empirical Two-Stage Cascade Head-to-Head Comparison (64,552 Books, 1,000 Test Queries)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-machine-learning-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔍 Key Machine Learning Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -955,6 +994,45 @@
     <span class="md-ellipsis">
       
         💡 Architectural Insights on Matryoshka Representation Learning (MRL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stage-7-fine-tuning-jina-reranker-v2-278m-multilingual-cross-encoder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Stage 7: Fine-Tuning Jina Reranker v2 (278M Multilingual Cross-Encoder)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚡ Stage 7: Fine-Tuning Jina Reranker v2 (278M Multilingual Cross-Encoder)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#empirical-two-stage-cascade-head-to-head-comparison-64552-books-1000-test-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Empirical Two-Stage Cascade Head-to-Head Comparison (64,552 Books, 1,000 Test Queries)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-machine-learning-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔍 Key Machine Learning Findings
       
     </span>
   </a>
@@ -1554,6 +1632,85 @@
 </li>
 <li>Because Snowflake Arctic embeds coordinates hierarchically, switching between dimensions requires no separate models, adapters, or weight decompression—only slicing the first <span class="arithmatex">\(m\)</span> indices and applying <span class="arithmatex">\(L_2\)</span> renormalization (<code>sub_vec / norm</code>).</li>
 <li>This is implemented in the live web app via interactive dimension pills (<code>768-d</code>, <code>512-d</code>, <code>256-d</code>, <code>128-d</code>, <code>64-d</code>).</li>
+</ol>
+<hr />
+<h2 id="stage-7-fine-tuning-jina-reranker-v2-278m-multilingual-cross-encoder">⚡ Stage 7: Fine-Tuning Jina Reranker v2 (278M Multilingual Cross-Encoder)</h2>
+<p>To resolve the parameter capacity bottleneck where the first-stage retriever (109M) exceeded the representational power of the initial reranker (22.7M), we fine-tuned <strong><code>jinaai/jina-reranker-v2-base-multilingual</code> (278M parameters)</strong> on 29,922 adversarial pairs mined directly from our Champion Arctic model using native <strong>BFloat16 (BF16)</strong> precision on an NVIDIA GeForce RTX 4050 6GB GPU.</p>
+<h3 id="empirical-two-stage-cascade-head-to-head-comparison-64552-books-1000-test-queries">Empirical Two-Stage Cascade Head-to-Head Comparison (64,552 Books, 1,000 Test Queries)</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Metric</th>
+<th style="text-align: center;">Stage 1: Arctic Retriever (109M)</th>
+<th style="text-align: center;">Stage 2: MiniLM Reranker (22.7M)</th>
+<th style="text-align: center;">Stage 2: Fine-Tuned Jina Reranker v2 (278M)</th>
+<th style="text-align: center;">Jina vs Arctic Delta</th>
+<th style="text-align: center;">Jina vs MiniLM Gain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Recall@1</strong></td>
+<td style="text-align: center;"><strong>49.00%</strong></td>
+<td style="text-align: center;">42.30% <em>(Degraded)</em></td>
+<td style="text-align: center;"><strong>48.40%</strong> <em>(Preserved)</em></td>
+<td style="text-align: center;">-0.60%</td>
+<td style="text-align: center;"><strong>+6.10%</strong> :fire:</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recall@5</strong></td>
+<td style="text-align: center;">66.40%</td>
+<td style="text-align: center;">56.60% <em>(Degraded)</em></td>
+<td style="text-align: center;"><strong>67.00%</strong></td>
+<td style="text-align: center;"><strong>+0.60%</strong> :chart_with_upwards_trend:</td>
+<td style="text-align: center;"><strong>+10.40%</strong> :fire:</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recall@10</strong></td>
+<td style="text-align: center;">71.80%</td>
+<td style="text-align: center;">62.90% <em>(Degraded)</em></td>
+<td style="text-align: center;"><strong>73.80%</strong></td>
+<td style="text-align: center;"><strong>+2.00%</strong> :rocket:</td>
+<td style="text-align: center;"><strong>+10.90%</strong> :fire:</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Recall@50</strong></td>
+<td style="text-align: center;"><strong>83.10%</strong></td>
+<td style="text-align: center;">83.10% <em>(Top 50 Pool)</em></td>
+<td style="text-align: center;"><strong>83.10%</strong> <em>(Top 50 Pool)</em></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>MRR@10</strong></td>
+<td style="text-align: center;">0.5681</td>
+<td style="text-align: center;">0.4848 <em>(Degraded)</em></td>
+<td style="text-align: center;"><strong>0.5649</strong></td>
+<td style="text-align: center;">-0.0032</td>
+<td style="text-align: center;"><strong>+0.0801</strong> :white_check_mark:</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Query Latency</strong></td>
+<td style="text-align: center;"><strong>8.75 ms</strong></td>
+<td style="text-align: center;">86.4 ms</td>
+<td style="text-align: center;"><strong>167.99 ms</strong></td>
+<td style="text-align: center;">+159.2 ms</td>
+<td style="text-align: center;">—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-machine-learning-findings">🔍 Key Machine Learning Findings</h3>
+<ol>
+<li><strong>Elimination of Reranker Degradation</strong>:</li>
+<li>While the 22.7M MiniLM cross-encoder collapsed Recall@10 from 71.80% down to 62.90% (-8.90%), the <strong>278M Jina Reranker v2</strong> reverses this deficit entirely, boosting Recall@10 to <strong>73.80% (+2.00% absolute, +10.90% over MiniLM)</strong>.</li>
+<li>Recall@5 similarly increases from 66.40% to <strong>67.00%</strong>.</li>
+<li>
+<p>Recall@1 remains essentially intact at <strong>48.40%</strong> (vs 42.30% collapse under MiniLM).</p>
+</li>
+<li>
+<p><strong>Multilingual and Long-Context Nuance</strong>:</p>
+</li>
+<li>Jina Reranker v2's 1,024-token context capacity and multilingual cross-attention enable it to ingest full book synopses alongside nuanced user trope constraints without truncating character roles or secondary plot arcs.</li>
 </ol>
 
 
