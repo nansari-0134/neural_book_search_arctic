@@ -33,6 +33,7 @@ from src.config import (
 # Priority order for model checkpoint loading
 CHAMPION_MODEL_PATH = OUTPUT_DIR / "arctic_v3" / "best_model"
 FALLBACK_MODEL_PATH = OUTPUT_DIR / "arctic_v2" / "best_model"
+JINA_CONTRASTIVE_MODEL_PATH = OUTPUT_DIR / "jina_contrastive_reranker" / "best_model"
 JINA_RERANKER_MODEL_PATH = OUTPUT_DIR / "jina_reranker" / "best_model"
 CROSS_ENCODER_MODEL_PATH = OUTPUT_DIR / "cross_encoder" / "best_model"
 
@@ -89,8 +90,22 @@ class BookSearchEngine:
         # 3. Load or compute catalog embeddings
         self._load_or_compute_embeddings()
         
-        # 4. Load Cross-Encoder reranker if available (Priority: Jina Reranker v2 278M -> MiniLM)
-        if JINA_RERANKER_MODEL_PATH.exists():
+        # 4. Load Cross-Encoder reranker if available (Priority: Jina Contrastive 278M -> Jina Pointwise -> MiniLM)
+        if JINA_CONTRASTIVE_MODEL_PATH.exists():
+            print(f"[Search Engine] Loading Jina Contrastive Reranker v2 from {JINA_CONTRASTIVE_MODEL_PATH.name}...")
+            try:
+                import src.jina_patch
+                self.cross_encoder = CrossEncoder(
+                    str(JINA_CONTRASTIVE_MODEL_PATH),
+                    max_length=256,
+                    trust_remote_code=True,
+                    device=self.device
+                )
+                self.reranker_name = "Jina Contrastive Reranker v2 (InfoNCE 278M)"
+                print("[Search Engine] Jina Contrastive Reranker v2 loaded successfully!")
+            except Exception as e:
+                print(f"[Search Engine] Warning: Could not load Jina Contrastive Reranker: {e}")
+        elif JINA_RERANKER_MODEL_PATH.exists():
             print(f"[Search Engine] Loading Jina Reranker v2 from {JINA_RERANKER_MODEL_PATH.name}...")
             try:
                 import src.jina_patch
@@ -278,10 +293,17 @@ class BookSearchEngine:
             
             # Sigmoid normalization for clean probability confidence
             ce_probs = 1.0 / (1.0 + np.exp(-ce_logits))
-            rerank_order = np.argsort(ce_probs)[::-1][:top_k]
+            
+            # Hybrid Cascade Fusion: Blend dense vector similarity (0.30) with cross-encoder probability (0.70)
+            sub_scores = scores[candidate_indices]
+            s_min, s_max = float(sub_scores.min()), float(sub_scores.max())
+            dense_norm = (sub_scores - s_min) / (s_max - s_min + 1e-6)
+            
+            blended_scores = 0.30 * dense_norm + 0.70 * ce_probs
+            rerank_order = np.argsort(blended_scores)[::-1][:top_k]
 
             best_indices = [candidate_indices[i] for i in rerank_order]
-            final_scores = [float(ce_probs[i]) for i in rerank_order]
+            final_scores = [float(blended_scores[i]) for i in rerank_order]
             rerank_latency_ms = (time.perf_counter() - t_ce_start) * 1000
             is_reranked = True
         else:

@@ -258,5 +258,57 @@ To resolve the parameter capacity bottleneck where the first-stage retriever (10
 2. **Multilingual and Long-Context Nuance**:
    * Jina Reranker v2's 1,024-token context capacity and multilingual cross-attention enable it to ingest full book synopses alongside nuanced user trope constraints without truncating character roles or secondary plot arcs.
 
+---
 
+## 🚀 Stage 8: Contrastive Listwise (InfoNCE) Fine-Tuning & Hybrid Cascade
 
+While Pointwise Binary Cross-Entropy (BCE) fine-tuning reversed the MiniLM degradation, Pointwise loss scores candidates independently without enforcing explicit relative ranking ($\text{Score}(q, d^+) > \text{Score}(q, d^-)$). To overcome this limitation, we executed **Contrastive Listwise InfoNCE Fine-Tuning** on `jinaai/jina-reranker-v2-base-multilingual` (278M parameters) with native BFloat16 on the NVIDIA RTX 4050 6GB GPU.
+
+### Contrastive Listwise Objective Formulation
+
+Pits each ground-truth book directly against **5 actively mined adversarial hard negatives** in a shared 6-way softmax competition:
+
+$$\mathcal{L}_{\text{InfoNCE}} = -\log \frac{\exp(s(q, d^+))}{\exp(s(q, d^+)) + \sum_{j=1}^{5} \exp(s(q, d^-_j))}$$
+
+### Training Telemetry & Validation Convergence
+
+| Hyperparameter / Metric | Observed Value | Description |
+| :--- | :--- | :--- |
+| **Architecture** | **Jina Reranker v2 (278M)** | Custom XLM-RoBERTa backbone with cross-attention |
+| **Training Volume** | **36,000 candidate pairs** | 6,000 queries $\times$ 6 candidates (1 pos + 5 hard negs) |
+| **Micro-Batch / Grad Accum** | **Batch 2 / Accum 8** | 12 sequences per forward pass; effective batch 96 pairs |
+| **Precision** | **Native BFloat16** | NVIDIA sm_89 Ada Lovelace architecture |
+| **Peak VRAM** | **2,842 MiB / 6,141 MiB** | Stable 46.3% VRAM footprint |
+| **Execution Time** | **7.77 minutes** | ~1.2s per optimizer step (375 total steps) |
+| **6-Way Top-1 Accuracy** | **66.00% $\rightarrow$ 70.80%** | **+4.80%** candidate discrimination gain |
+| **Validation MRR** | **0.7657 $\rightarrow$ 0.7997** | **+0.0340** reciprocal rank improvement |
+| **Validation Loss** | **1.1359 $\rightarrow$ 0.9123** | Monotonic convergence across all checkpoints |
+
+---
+
+### Full-Catalog Two-Stage Cascade Head-to-Head Comparison (64,552 Books, 1,000 Test Queries)
+
+Evaluated against the entire 64,552-book catalog on 1,000 holdout test queries across all four neural architectures:
+
+| Metric | Stage 1: Arctic Dense (109M) | Stage 2: MiniLM (22.7M) | Stage 2: Pointwise Jina (278M) | Stage 2: Contrastive Jina (278M) | Stage 2: Hybrid Cascade (Dense + Contrastive) | Total Gain vs Stage 1 | Total Gain vs MiniLM |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Recall@1** | 49.00% | 42.30% *(Degraded)* | 48.40% | 48.40% | **52.50%** :fire: | **+3.50%** | **+10.20%** :star2: |
+| **Recall@5** | 66.40% | 56.60% *(Degraded)* | 67.00% | 66.80% | **70.00%** :chart_with_upwards_trend: | **+3.60%** | **+13.40%** :star2: |
+| **Recall@10** | 71.80% | 62.90% *(Degraded)* | 73.80% | 72.80% | **74.90%** :rocket: | **+3.10%** | **+12.00%** :star2: |
+| **Recall@50** | **83.10%** | 83.10% *(Top 50 Pool)* | 83.10% | 83.10% | **83.10%** | — | — |
+| **MRR@10** | 0.5681 | 0.4848 *(Degraded)* | 0.5649 | 0.5626 | **0.6001** :crown: | **+0.0320** | **+0.1153** :star2: |
+| **Query Latency** | **9.06 ms** | 86.4 ms | 167.99 ms | 168.13 ms | **177.20 ms** | +168.1 ms | — |
+
+---
+
+### 💡 Key Architectural Insights on Contrastive Reranking & Hybrid Fusion
+
+1. **The Power of Hybrid Cascade Fusion ($0.30 \cdot \text{Dense} + 0.70 \cdot \text{Contrastive}$)**:
+   * Cross-encoders are exceptionally sensitive to token-level semantic match, but can occasionally over-index on keyword matches while losing holistic plot vector context.
+   * Anchoring the contrastive cross-encoder score with normalized dense retriever similarity ($0.30 \times S_{\text{Arctic}} + 0.70 \times S_{\text{Jina}}$) elevates **Recall@1 to 52.50%** (more than 1 out of 2 queries landing on the exact ground truth at rank #1) and drives **MRR@10 across the 0.60 threshold to 0.6001**.
+
+2. **Complete Recovery from Cross-Encoder Degradation**:
+   * Compared to the initial 22.7M MiniLM model, the Hybrid Contrastive Cascade delivers a **+10.20% gain in Recall@1** (52.50% vs 42.30%), a **+12.00% gain in Recall@10** (74.90% vs 62.90%), and an **MRR@10 leap from 0.4848 to 0.6001**.
+
+3. **Production Deployment Recommendation**:
+   * In production, the system supports both sub-10ms ultra-low-latency vector retrieval (Stage 1 Arctic standalone at 9.06 ms) and the maximum-precision Two-Stage Hybrid Cascade at 177 ms via the interactive web application.

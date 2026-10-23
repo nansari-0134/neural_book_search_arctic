@@ -38,23 +38,36 @@ from src.config import (
 from src.data_loader import load_book_metadata
 
 ARCTIC_MODEL_PATH = OUTPUT_DIR / "arctic_v3" / "best_model"
-JINA_MODEL_PATH = OUTPUT_DIR / "jina_reranker" / "best_model"
-MINILM_MODEL_PATH = OUTPUT_DIR / "cross_encoder" / "best_model"
+CONTRASTIVE_MODEL_PATH = OUTPUT_DIR / "jina_contrastive_reranker" / "best_model"
+POINTWISE_MODEL_PATH = OUTPUT_DIR / "jina_reranker" / "best_model"
 
 CACHE_EMBEDDINGS = PROJECT_ROOT / "app" / ".cache" / "catalog_embeddings_fp16.npy"
 CACHE_BOOK_IDS = PROJECT_ROOT / "app" / ".cache" / "catalog_book_ids.json"
 TEST_DATA_FILE = PROJECT_ROOT / "data" / "test.jsonl"
-OUT_JSON = RESULTS_DIR / "benchmark_jina_reranker.json"
+OUT_JSON = RESULTS_DIR / "benchmark_jina_contrastive.json"
 
 TOP_K_CANDIDATES = 50
 
-def run_jina_benchmark(sample_size: int = 1000):
-    print("=" * 80)
-    print("  TWO-STAGE BENCHMARK: ARCTIC RETRIEVER + JINA RERANKER V2 (278M)")
+def run_jina_benchmark(sample_size: int = 1000, model_path_str: str = None):
+    # Determine model path
+    if model_path_str:
+        jina_path = Path(model_path_str)
+    elif CONTRASTIVE_MODEL_PATH.exists():
+        jina_path = CONTRASTIVE_MODEL_PATH
+    elif POINTWISE_MODEL_PATH.exists():
+        jina_path = POINTWISE_MODEL_PATH
+    else:
+        jina_path = Path("jinaai/jina-reranker-v2-base-multilingual")
+
+    model_display_name = "Jina Contrastive Reranker v2 (InfoNCE)" if "contrastive" in str(jina_path) else "Jina Reranker v2"
+
+    print("=" * 85)
+    print(f"  TWO-STAGE BENCHMARK: ARCTIC RETRIEVER + {model_display_name.upper()}")
+    print(f"  Model Path:   {jina_path}")
     print(f"  Catalog Size: 64,552 Books | Top Candidates Mined: {TOP_K_CANDIDATES}")
     print(f"  Test Query Sample: {sample_size:,} queries")
     print(f"  Device: {DEVICE}")
-    print("=" * 80)
+    print("=" * 85)
 
     # 1. Load book metadata
     print("\n[1/5] Loading book catalog metadata...")
@@ -78,10 +91,9 @@ def run_jina_benchmark(sample_size: int = 1000):
     if USE_FP16 and DEVICE == "cuda":
         bi_encoder.half()
 
-    jina_path = str(JINA_MODEL_PATH) if JINA_MODEL_PATH.exists() else "jinaai/jina-reranker-v2-base-multilingual"
-    print(f"      Loading Stage 2 Jina Reranker v2: {Path(jina_path).name}...")
+    print(f"      Loading Stage 2 Reranker: {jina_path.name}...")
     jina_reranker = CrossEncoder(
-        jina_path,
+        str(jina_path),
         max_length=256,
         trust_remote_code=True,
         device=DEVICE
@@ -105,12 +117,16 @@ def run_jina_benchmark(sample_size: int = 1000):
     s1_r1, s1_r5, s1_r10, s1_r50 = 0, 0, 0, 0
     s1_mrr10 = 0.0
 
-    # Stage 2 (Arctic + Jina Reranker)
-    jina_r1, jina_r5, jina_r10 = 0, 0, 0
-    jina_mrr10 = 0.0
+    # Stage 2: Pure Jina Reranker
+    pure_r1, pure_r5, pure_r10 = 0, 0, 0
+    pure_mrr10 = 0.0
+
+    # Stage 2: Hybrid Score Fusion (0.30 Dense + 0.70 Reranker)
+    hyb_r1, hyb_r5, hyb_r10 = 0, 0, 0
+    hyb_mrr10 = 0.0
 
     s1_latencies = []
-    jina_latencies = []
+    rerank_latencies = []
 
     print(f"\n[5/5] Evaluating Two-Stage Retrieval across {N:,} queries...")
     t0_all = time.time()
@@ -149,24 +165,43 @@ def run_jina_benchmark(sample_size: int = 1000):
         candidate_texts = [book_texts.get(cid, "Untitled") for cid in top_k_ids]
         jina_pairs = [(query, text) for text in candidate_texts]
 
-        jina_scores = jina_reranker.predict(jina_pairs, batch_size=TOP_K_CANDIDATES, show_progress_bar=False)
-        reranked_order = np.argsort(jina_scores)[::-1]
-        reranked_ids = [top_k_ids[i] for i in reranked_order]
-        jina_latencies.append((time.time() - t0_s2) * 1000)
+        ce_logits = jina_reranker.predict(jina_pairs, batch_size=TOP_K_CANDIDATES, show_progress_bar=False)
+        rerank_latencies.append((time.time() - t0_s2) * 1000)
 
-        # Stage 2 Metrics
-        if pos_id in reranked_ids:
-            rpos = reranked_ids.index(pos_id) + 1
+        # 2a. Pure Reranker Ranking
+        pure_order = np.argsort(ce_logits)[::-1]
+        pure_ranked_ids = [top_k_ids[i] for i in pure_order]
+
+        if pos_id in pure_ranked_ids:
+            rpos = pure_ranked_ids.index(pos_id) + 1
             if rpos <= 1:
-                jina_r1 += 1
+                pure_r1 += 1
             if rpos <= 5:
-                jina_r5 += 1
+                pure_r5 += 1
             if rpos <= 10:
-                jina_r10 += 1
-                jina_mrr10 += 1.0 / rpos
+                pure_r10 += 1
+                pure_mrr10 += 1.0 / rpos
+
+        # 2b. Hybrid Score Fusion (0.30 Dense + 0.70 Reranker)
+        bi_sub_scores = scores[top_k_indices].cpu().numpy()
+        bi_norm = (bi_sub_scores - bi_sub_scores.min()) / (bi_sub_scores.max() - bi_sub_scores.min() + 1e-6)
+        ce_probs = 1.0 / (1.0 + np.exp(-ce_logits))
+        hybrid_scores = 0.30 * bi_norm + 0.70 * ce_probs
+        hybrid_order = np.argsort(hybrid_scores)[::-1]
+        hybrid_ranked_ids = [top_k_ids[i] for i in hybrid_order]
+
+        if pos_id in hybrid_ranked_ids:
+            hpos = hybrid_ranked_ids.index(pos_id) + 1
+            if hpos <= 1:
+                hyb_r1 += 1
+            if hpos <= 5:
+                hyb_r5 += 1
+            if hpos <= 10:
+                hyb_r10 += 1
+                hyb_mrr10 += 1.0 / hpos
 
         if (idx + 1) % 200 == 0 or (idx + 1) == N:
-            print(f"  Processed {idx + 1}/{N} queries | S1 R@1: {s1_r1/(idx+1)*100:.2f}% | Jina R@1: {jina_r1/(idx+1)*100:.2f}% | Jina R@10: {jina_r10/(idx+1)*100:.2f}%")
+            print(f"  Processed {idx + 1}/{N} queries | Dense R@10: {s1_r10/(idx+1)*100:.2f}% | Pure Jina R@10: {pure_r10/(idx+1)*100:.2f}% | Hybrid R@10: {hyb_r10/(idx+1)*100:.2f}%")
 
     total_eval_time = time.time() - t0_all
 
@@ -179,38 +214,48 @@ def run_jina_benchmark(sample_size: int = 1000):
         "mean_latency_ms": round(float(np.mean(s1_latencies)), 2)
     }
 
-    jina_metrics = {
-        "recall_1": round((jina_r1 / N) * 100, 2),
-        "recall_5": round((jina_r5 / N) * 100, 2),
-        "recall_10": round((jina_r10 / N) * 100, 2),
-        "recall_50": round((s1_r50 / N) * 100, 2), # R@50 remains candidate pool upper bound
-        "mrr_10": round(jina_mrr10 / N, 4),
-        "mean_latency_ms": round(float(np.mean(jina_latencies)), 2)
+    pure_metrics = {
+        "recall_1": round((pure_r1 / N) * 100, 2),
+        "recall_5": round((pure_r5 / N) * 100, 2),
+        "recall_10": round((pure_r10 / N) * 100, 2),
+        "recall_50": round((s1_r50 / N) * 100, 2),
+        "mrr_10": round(pure_mrr10 / N, 4),
+        "mean_latency_ms": round(float(np.mean(rerank_latencies)), 2)
     }
 
-    print("\n" + "=" * 80)
-    print("  TWO-STAGE RETRIEVAL BENCHMARK RESULTS")
-    print("=" * 80)
-    print(f"{'Metric':<20} | {'Stage 1: Arctic Dense':<25} | {'Stage 2: Jina Reranker v2':<25}")
-    print("-" * 80)
-    print(f"{'Recall@1':<20} | {s1_metrics['recall_1']:>23.2f}% | {jina_metrics['recall_1']:>23.2f}%")
-    print(f"{'Recall@5':<20} | {s1_metrics['recall_5']:>23.2f}% | {jina_metrics['recall_5']:>23.2f}%")
-    print(f"{'Recall@10':<20} | {s1_metrics['recall_10']:>23.2f}% | {jina_metrics['recall_10']:>23.2f}%")
-    print(f"{'Recall@50':<20} | {s1_metrics['recall_50']:>23.2f}% | {jina_metrics['recall_50']:>23.2f}%")
-    print(f"{'MRR@10':<20} | {s1_metrics['mrr_10']:>24.4f} | {jina_metrics['mrr_10']:>24.4f}")
-    print(f"{'Latency (ms)':<20} | {s1_metrics['mean_latency_ms']:>21.2f} ms | {jina_metrics['mean_latency_ms']:>21.2f} ms")
-    print("=" * 80)
+    hybrid_metrics = {
+        "recall_1": round((hyb_r1 / N) * 100, 2),
+        "recall_5": round((hyb_r5 / N) * 100, 2),
+        "recall_10": round((hyb_r10 / N) * 100, 2),
+        "recall_50": round((s1_r50 / N) * 100, 2),
+        "mrr_10": round(hyb_mrr10 / N, 4),
+        "mean_latency_ms": round(float(np.mean(s1_latencies)) + float(np.mean(rerank_latencies)), 2)
+    }
+
+    print("\n" + "=" * 95)
+    print("  TWO-STAGE RETRIEVAL BENCHMARK RESULTS (64,552 BOOKS)")
+    print("=" * 95)
+    print(f"{'Metric':<18} | {'Stage 1: Arctic Dense':<23} | {'Stage 2: Pure Jina':<23} | {'Stage 2: Hybrid Cascade':<23}")
+    print("-" * 95)
+    print(f"{'Recall@1':<18} | {s1_metrics['recall_1']:>21.2f}% | {pure_metrics['recall_1']:>21.2f}% | {hybrid_metrics['recall_1']:>21.2f}%")
+    print(f"{'Recall@5':<18} | {s1_metrics['recall_5']:>21.2f}% | {pure_metrics['recall_5']:>21.2f}% | {hybrid_metrics['recall_5']:>21.2f}%")
+    print(f"{'Recall@10':<18} | {s1_metrics['recall_10']:>21.2f}% | {pure_metrics['recall_10']:>21.2f}% | {hybrid_metrics['recall_10']:>21.2f}%")
+    print(f"{'Recall@50':<18} | {s1_metrics['recall_50']:>21.2f}% | {pure_metrics['recall_50']:>21.2f}% | {hybrid_metrics['recall_50']:>21.2f}%")
+    print(f"{'MRR@10':<18} | {s1_metrics['mrr_10']:>22.4f} | {pure_metrics['mrr_10']:>22.4f} | {hybrid_metrics['mrr_10']:>22.4f}")
+    print(f"{'Latency (ms)':<18} | {s1_metrics['mean_latency_ms']:>19.2f} ms | {pure_metrics['mean_latency_ms']:>19.2f} ms | {hybrid_metrics['mean_latency_ms']:>19.2f} ms")
+    print("=" * 95)
 
     # Save results payload
     payload = {
         "title": "Two-Stage Retrieval Benchmark (Arctic Dense + Jina Reranker v2)",
         "retriever": "Snowflake/snowflake-arctic-embed-m-v1.5 (Progressive Refinement)",
-        "reranker": "jinaai/jina-reranker-v2-base-multilingual (Fine-Tuned)",
+        "reranker": str(jina_path),
         "catalog_size": 64552,
         "sample_size": N,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "stage_1_retriever": s1_metrics,
-        "stage_2_jina_reranker": jina_metrics
+        "stage_2_pure_reranker": pure_metrics,
+        "stage_2_hybrid_cascade": hybrid_metrics
     }
 
     with open(OUT_JSON, "w", encoding="utf-8") as f:
@@ -220,5 +265,6 @@ def run_jina_benchmark(sample_size: int = 1000):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sample-size", type=int, default=1000, help="Number of test queries")
+    parser.add_argument("--model-path", type=str, default=None, help="Path to reranker model checkpoint")
     args = parser.parse_args()
-    run_jina_benchmark(args.sample_size)
+    run_jina_benchmark(args.sample_size, args.model_path)
