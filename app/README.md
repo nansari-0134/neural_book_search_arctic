@@ -18,12 +18,12 @@ An interactive, production-ready neural book search engine powered by the fine-t
 ### 1. Launch the Interactive Web Application
 
 ```bash
-# Start with Uvicorn dev server on port 8000
-python app/app.py
+# Start with Uvicorn server on port 8080
+python -m uvicorn app.app:app --host 127.0.0.1 --port 8080
 ```
 
 Open your browser at:
-👉 **`http://127.0.0.1:8000`**
+👉 **`http://127.0.0.1:8080`**
 
 ### 2. Run CLI Semantic Search
 

@@ -33,6 +33,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let debounceTimer = null;
     let lastQuery = '';
 
+    // Check system status on startup
+    const brandBadge = document.querySelector('.brand-badge span:last-child');
+    async function checkHealth() {
+        try {
+            const res = await fetch('/api/health');
+            const data = await res.json();
+            if (data.ready) {
+                if (brandBadge) brandBadge.textContent = 'Snowflake Arctic Embed v1.5 • 64,552 Books Indexed';
+            } else {
+                if (brandBadge) brandBadge.textContent = 'Snowflake Arctic Embed v1.5 • Preparing Catalog Vectors...';
+                setTimeout(checkHealth, 3000);
+            }
+        } catch (e) {
+            setTimeout(checkHealth, 5000);
+        }
+    }
+    checkHealth();
+
     // Keyboard shortcut '/' to focus
     window.addEventListener('keydown', (e) => {
         if (e.key === '/' && document.activeElement !== searchInput) {

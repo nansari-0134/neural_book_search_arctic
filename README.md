@@ -142,11 +142,11 @@ neural_book_search_arctic/
 The `app/` folder contains a standalone, production-ready search interface:
 
 ```bash
-# Launch the FastAPI web server
-python app/app.py
+# Launch the FastAPI web server on port 8080
+python -m uvicorn app.app:app --host 127.0.0.1 --port 8080
 ```
 
-Then visit **`http://127.0.0.1:8000`** in your browser.
+Then visit **`http://127.0.0.1:8080`** in your browser.
 
 * **Sub-15ms Latency**: Matrix inner products computed in milliseconds.
 * **Matryoshka Dimension Switcher**: Seamlessly test 64-d, 128-d, 256-d, 512-d, or 768-d vector truncation.
