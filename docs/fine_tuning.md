@@ -101,14 +101,24 @@ We solved this without dropping a single hard negative via a 3-point architectur
 
 ---
 
-## 6. Cycle 2 Progressive Fine-Tuning (Currently Active)
+## 6. Cycle 2 Progressive Fine-Tuning & Results
 
-Cycle 2 fine-tunes the retriever on **179,319 newly mined adversarial pairs** from `data/train_arctic_v3.jsonl`:
+Cycle 2 fine-tuned the retriever on **179,319 progressive adversarial pairs** from `data/train_arctic_v3.jsonl`:
 * **Starting Weights**: `arctic_output/arctic_v2/best_model` (Cycle 1 checkpoint)
-* **Warm-Start Loss**: Started at **`1.1224`** (significantly lower than Cycle 1's starting loss of `1.4070`)
-* **Adversarial Negatives**: 3 fresh negatives mined from Cycle 1's confusion boundary + 2 retained Cycle 1 negatives
+* **Warm-Start Loss**: Started at **`1.1224`** $\rightarrow$ converged to **`0.5312`**
+* **Adversarial Negatives**: 3 fresh negatives mined from Cycle 1's confusion boundary + 2 retained Cycle 1 negatives (Top-5 hard negatives per query)
 * **Schedule**: 5,604 optimizer steps with cosine annealing decay
-* **Estimated Runtime**: **~5.8 hours**
-* **Target Objective**: Push Test Recall@10 from **73.96% $\rightarrow$ 76%+**
+* **Training Time**: **374.8 minutes (~6.2 hours)**
+* **Output Checkpoint**: [arctic_output/arctic_v3/best_model](file:///c:/Users/Shilpa/OneDrive/Documents/Book%20Semantic%20Search/neural_book_search_arctic/arctic_output/arctic_v3/best_model)
+
+### 📈 Full Progression Comparison (64,552 Books Catalog)
+
+| Metric | Baseline | Phase 1 | Cycle 1 (Mined Top-5) | Cycle 2 (Champion Model) | Total Gain vs Baseline |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Recall@1** | 21.67% | 29.16% | 35.60% | **35.48%** | 🌟 **+13.81% (+64% rel)** |
+| **Recall@5** | 48.41% | 58.29% | 68.09% | **68.50%** | 🌟 **+20.09% (+42% rel)** |
+| **Recall@10** | 55.40% | 64.67% | 73.96% | **74.70%** | 👑 **+19.30% (+35% rel)** |
+| **Recall@50** | 69.57% | 78.20% | 84.66% | **85.51%** | 🌟 **+15.94% (+23% rel)** |
+
 
 

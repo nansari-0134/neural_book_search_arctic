@@ -23,14 +23,14 @@ graph TD
 
 ## 🏆 Current Benchmark Highlights (64,552 Books)
 
-| Metric | Baseline Arctic | Phase 1 (Easy Negs) | Cycle 1 (Mined Top-5 Negs) | Total Gain vs Baseline |
-| :--- | :---: | :---: | :---: | :---: |
-| **Recall@1** | 21.67% | 29.16% (+7.49%) | **35.60%** (+6.44%) | 🌟 **+13.93% (+64% rel)** |
-| **Recall@5** | 48.41% | 58.29% (+9.88%) | **68.09%** (+9.80%) | 🌟 **+19.68% (+41% rel)** |
-| **Recall@10** | 55.40% | 64.67% (+9.27%) | **73.96%** (+9.29%) | 🌟 **+18.56% (+33% rel)** |
-| **Recall@50** | 69.57% | 78.20% (+8.63%) | **84.66%** (+6.46%) | 🌟 **+15.09% (+22% rel)** |
+| Metric | Baseline Arctic | Phase 1 (Easy Negs) | Cycle 1 (Mined Top-5 Negs) | Cycle 2 (Champion Model) | Total Gain vs Baseline |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Recall@1** | 21.67% | 29.16% (+7.49%) | 35.60% (+6.44%) | **35.48%** | 🌟 **+13.81% (+64% rel)** |
+| **Recall@5** | 48.41% | 58.29% (+9.88%) | 68.09% (+9.80%) | **68.50%** (+0.41%) | 🌟 **+20.09% (+42% rel)** |
+| **Recall@10** | 55.40% | 64.67% (+9.27%) | 73.96% (+9.29%) | **74.70%** (+0.74%) | 👑 **+19.30% (+35% rel)** |
+| **Recall@50** | 69.57% | 78.20% (+8.63%) | 84.66% (+6.46%) | **85.51%** (+0.85%) | 🌟 **+15.94% (+23% rel)** |
 
-*Evaluated on 32,170 unseen test queries against 64,552 Goodreads books. Cycle 2 fine-tuning is currently underway to target >76% Recall@10. See [Benchmark Progression](benchmarks.md) for full breakdown.*
+*Evaluated on 32,170 unseen test queries against the full 64,552 Goodreads books catalog. Cycle 2 represents the best overall retriever model. See [Benchmark Progression](benchmarks.md) for full breakdown.*
 
 ---
 

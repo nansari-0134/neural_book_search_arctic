@@ -42,8 +42,8 @@
 | **3a** | **Iterative Negative Mining (Cycle 1)**| ✅ **COMPLETE** | `data/train_arctic_v2.jsonl` | 199,808 pairs mined; 1.8M false negatives shielded |
 | **3b** | **Fine-Tuning Cycle 1** | ✅ **COMPLETE** | `arctic_output/arctic_v2/best_model` | Test: R@1: 35.60%, R@10: 73.96%, R@50: 84.66% (+18.6% R@10) |
 | **3c** | **Iterative Negative Mining (Cycle 2)**| ✅ **COMPLETE** | `data/train_arctic_v3.jsonl` | 179,319 pairs mined; 1.44M false negatives shielded |
-| **3d** | **Fine-Tuning Cycle 2** | 🚀 **IN PROGRESS** | `arctic_output/arctic_v3/best_model` | Training on 179,319 Cycle 2 adversarial pairs (Top-5 negs) |
-| **4** | **Final Benchmarking & Progression Comparison** | ⏳ **PENDING** | `results/final_comparison.json` | Complete progression across Baseline, Phase 1, Cycle 1, and Cycle 2 |
+| **3d** | **Fine-Tuning Cycle 2** | ✅ **COMPLETE** | `arctic_output/arctic_v3/best_model` | Test: R@1: 35.48%, R@10: 74.70%, R@50: 85.51% (+19.3% R@10) |
+| **4** | **Final Benchmarking & Progression Comparison** | ⏳ **READY TO START** | `results/final_comparison.json` | Complete progression across Baseline, Phase 1, Cycle 1, and Cycle 2 |
 | **5** | **Documentation Build & Site Finalization** | ⏳ **PENDING** | `site/` | Fully audited MkDocs documentation |
 
 ---

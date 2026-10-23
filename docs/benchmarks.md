@@ -23,7 +23,12 @@ graph LR
         C10["R@10: 73.96% (+18.56%)"]
         C50["R@50: 84.66% (+15.09%)"]
     end
-    Baseline --> Phase1 --> Cycle1
+    subgraph Cycle2 ["Cycle 2 (Progressive Negs)"]
+        C2_1["R@1: 35.48% (+13.81%)"]
+        C2_10["R@10: 74.70% (+19.30%)"]
+        C2_50["R@50: 85.51% (+15.94%)"]
+    end
+    Baseline --> Phase1 --> Cycle1 --> Cycle2
 ```
 
 ---
@@ -39,10 +44,11 @@ All evaluations search across the **entire 64,552-book catalog** in exact rank o
 | | **Snowflake Arctic Baseline** | **21.67%** | **48.41%** | **55.40%** | **69.57%** | Starting Point |
 | | **Snowflake Arctic Phase 1** | **29.16%** | **58.29%** | **64.67%** | **78.20%** | :rocket: **+7.49% R@1, +9.27% R@10** |
 | | **Snowflake Arctic Cycle 1** | **35.60%** | **68.09%** | **73.96%** | **84.66%** | 🌟 **+13.93% R@1, +18.56% R@10** |
-| | **Snowflake Arctic Cycle 2** | *Pending* | *Pending* | *Pending* | *Pending* | Target: >76% R@10 |
+| | **Snowflake Arctic Cycle 2** | **35.48%** | **68.50%** | **74.70%** | **85.51%** | 👑 **+13.81% R@1, +19.30% R@10** |
 | **Validation Set**<br>*(32,340 queries)* | **Snowflake Arctic Baseline** | **22.24%** | **49.02%** | **55.43%** | **69.41%** | Starting Point |
 | | **Snowflake Arctic Phase 1** | **29.86%** | **59.55%** | **65.70%** | **78.36%** | :rocket: **+7.62% R@1, +10.27% R@10** |
 | | **Snowflake Arctic Cycle 1** | **36.01%** | **68.78%** | **74.41%** | **84.84%** | 🌟 **+13.77% R@1, +18.98% R@10** |
+| | **Snowflake Arctic Cycle 2** | **36.39%** | **69.51%** | **75.04%** | **85.65%** | 👑 **+14.15% R@1, +19.61% R@10** |
 
 ---
 
@@ -87,6 +93,26 @@ Cycle 1 fine-tuning introduced **5 actively mined hard negatives per query** (19
 | **VRAM Footprint** | **2,835 – 3,429 MiB** | Stable 55% utilization on RTX 4050 6GB |
 | **Thermal & Power** | **74–77°C sustained** | Stable power draw: 73W – 76W (100% compute bound) |
 | **Final Loss** | **`1.4070` $\rightarrow$ `0.5841`** | Strong convergence on adversarial pairs |
+
+---
+
+## ⚡ Cycle 2 Training Telemetry (Progressive Hard Negatives)
+
+Cycle 2 fine-tuning refined the retriever on **179,319 progressive adversarial pairs** (3 fresh negatives + 2 retained negatives):
+
+| Hyperparameter / Metric | Observed Value | Description |
+| :--- | :--- | :--- |
+| **Base Model Checkpoint** | **`arctic_v2/best_model`** | Warm-starts directly from Cycle 1 model |
+| **Dataset Size** | **179,319 pairs** | Filtered from Cycle 1 confusions with 8-layer shield |
+| **Micro-Batch / Grad Accum** | **Batch 4 / Accum 8** | Effective batch size: 32 (exact gradient preservation) |
+| **Total Micro-Steps** | **44,830 micro-steps** | 5,604 full optimizer steps |
+| **Learning Rate** | **`1.20e-05`** | Cosine decay with linear warmup (560 steps) |
+| **Execution Time** | **374.8 minutes (~6.2 hours)** | Average step latency: **0.50 seconds** |
+| **VRAM Footprint** | **2,850 – 3,450 MiB** | Stable 55% utilization on RTX 4050 6GB |
+| **Thermal & Power** | **72–76°C sustained** | Stable power draw: 70W – 74W |
+| **Loss Trajectory** | **`1.1224` $\rightarrow$ `0.5312`** | High transfer efficiency from Cycle 1 weights |
+
+---
 
 ## 🎯 Evaluation Protocol & Recall Math
 
