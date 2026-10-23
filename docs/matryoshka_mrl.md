@@ -87,21 +87,22 @@ def compress_matryoshka_vector(vector: np.ndarray, target_dim: int = 256) -> np.
 
 ## 5. Empirical Performance on the 64,552 Goodreads Book Catalog
 
-Our production application pre-computes FP16 embeddings for all **64,552 books**. The table below illustrates the empirical trade-offs between memory footprint, compute complexity, and retrieval accuracy across all supported MRL dimensions:
+Our production application evaluates the Champion Arctic retriever across the entire **64,552-book catalog** over **1,000 test queries**. The table below documents the exact empirical trade-offs between vector dimensions, retrieval precision, memory footprint, and compute complexity:
 
-| Dimension | RAM / Storage Footprint (FP16) | Dot-Product Multiply-Adds | Memory Savings | FLOPs Reduction | Recall@10 Retained |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| **768-d** *(Full Capacity)* | **99.1 MiB** | $49.5 \times 10^6$ ops | *Baseline (0%)* | *Baseline (1x)* | **100.0%** |
-| **512-d** | **66.1 MiB** | $33.0 \times 10^6$ ops | **33.3% smaller** | **1.5x faster** | **99.8%** |
-| **256-d** *(Sweet Spot)* | **33.0 MiB** | $16.5 \times 10^6$ ops | **66.7% smaller (3x)** | **3.0x faster** | **> 99.1%** |
-| **128-d** | **16.5 MiB** | $8.2 \times 10^6$ ops | **83.3% smaller (6x)** | **6.0x faster** | **~97.2%** |
-| **64-d** *(Edge / Low-Power)* | **8.2 MiB** | $4.1 \times 10^6$ ops | **91.7% smaller (12x)**| **12.0x faster**| **~93.5%** |
+| Dimension | Recall@1 | Recall@5 | Recall@10 | Recall@50 | MRR@10 | Recall@10 Retained | RAM Footprint (FP16) | Dot-Product FLOPs | Speedup Factor |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **768-d** *(Full)* | **49.80%** | **66.50%** | **71.90%** | **83.30%** | **0.5726** | **100.0%** *(Baseline)* | **94.6 MiB** | $99.2 \times 10^6$ ops | *Baseline (1.0x)* |
+| **512-d** | 49.00% | 65.80% | 70.70% | 82.90% | 0.5624 | **98.33%** | **63.0 MiB** *(33% less)* | $66.1 \times 10^6$ ops | **1.5x faster** |
+| **256-d** *(Sweet Spot)* | **48.70%** | **65.60%** | **71.40%** | **83.40%** | **0.5597** | **99.30%** | **31.5 MiB** *(3x less)* | $33.1 \times 10^6$ ops | **3.0x faster** |
+| **128-d** | 40.90% | 56.10% | 63.20% | 76.20% | 0.4791 | **87.90%** | **15.8 MiB** *(6x less)* | $16.5 \times 10^6$ ops | **6.0x faster** |
+| **64-d** *(Edge)* | 27.10% | 40.50% | 46.80% | 60.00% | 0.3290 | **65.09%** | **7.9 MiB** *(12x less)*| $8.3 \times 10^6$ ops | **12.0x faster** |
 
 ### Key Observation: The 256-d "Sweet Spot"
 By reducing vector dimension from **768 down to 256**:
-* Memory and disk storage dropped by **$3\times$** (from 99.1 MiB to 33.0 MiB).
-* CPU/GPU inner-product calculations dropped by **$3\times$**.
-* The search engine still preserves **$>99\%$ of full Recall@10**.
+* Memory and disk storage dropped by **$3\times$** (from 94.6 MiB to 31.5 MiB).
+* Dot-product FLOPs dropped by **$3\times$** (from 99.2M to 33.1M operations per query).
+* The search engine still preserves **99.30% of full Recall@10** (71.40% vs 71.90%) and **97.75% of MRR@10** (0.5597 vs 0.5726).
+* Even Recall@50 is virtually identical (**83.40% vs 83.30%**), meaning candidate pools fed to downstream rerankers suffer zero candidate degradation.
 
 ---
 

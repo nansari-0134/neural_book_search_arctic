@@ -206,4 +206,29 @@ We trained a Cross-Encoder reranker (`cross-encoder/ms-marco-MiniLM-L-6-v2`, 22.
    * The champion fine-tuned Arctic Bi-Encoder (`arctic_v3`) is the **primary production engine** for sub-15ms high-accuracy search.
    * The Cross-Encoder is integrated into the web application as an **interactive toggle switch (`⚡ Cross-Encoder Rerank`)**, allowing users to explore and contrast both neural architectures in real time.
 
+---
+
+## 🪆 Stage 6: Empirical Matryoshka Dimensional Benchmark (64,552 Books)
+
+To evaluate vector compression trade-offs under real-world conditions, we evaluated the Champion Arctic retriever across all supported Matryoshka dimensions ($768$, $512$, $256$, $128$, and $64$) against all **64,552 books** in the catalog over **1,000 test queries**:
+
+| Vector Dimension | Recall@1 | Recall@5 | Recall@10 | Recall@50 | MRR@10 | R@10 Retained | RAM Footprint (FP16) | Dot-Product FLOPs | Speedup Factor |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **768-d** *(Full Capacity)* | **49.80%** | **66.50%** | **71.90%** | **83.30%** | **0.5726** | **100.0%** *(Baseline)* | **94.6 MiB** | $99.2 \times 10^6$ ops | *Baseline (1.0x)* |
+| **512-d** | 49.00% | 65.80% | 70.70% | 82.90% | 0.5624 | **98.33%** | **63.0 MiB** *(33% less)* | $66.1 \times 10^6$ ops | **1.5x faster** |
+| **256-d** *(Sweet Spot)* | **48.70%** | **65.60%** | **71.40%** | **83.40%** | **0.5597** | **99.30%** | **31.5 MiB** *(3x less)* | $33.1 \times 10^6$ ops | **3.0x faster** |
+| **128-d** | 40.90% | 56.10% | 63.20% | 76.20% | 0.4791 | **87.90%** | **15.8 MiB** *(6x less)* | $16.5 \times 10^6$ ops | **6.0x faster** |
+| **64-d** *(Edge / Low-Power)* | 27.10% | 40.50% | 46.80% | 60.00% | 0.3290 | **65.09%** | **7.9 MiB** *(12x less)*| $8.3 \times 10^6$ ops | **12.0x faster** |
+
+### 💡 Architectural Insights on Matryoshka Representation Learning (MRL)
+
+1. **The 256-d Sweet Spot (99.30% Accuracy at 33% Cost)**:
+   * Truncating from 768-d down to 256-d slashes RAM consumption by **66.7%** (from 94.6 MiB to 31.5 MiB) and triples matrix calculation throughput (**3.0x theoretical speedup**).
+   * Yet Recall@10 drops by only **0.50%** (from 71.90% to 71.40%), preserving **99.30%** of full-dimension accuracy, and MRR@10 drops from `0.5726` to `0.5597` (preserving **97.75%**).
+   * Candidate pool recall (Recall@50) remains effectively identical (**83.40% vs 83.30%**).
+
+2. **Zero-Overhead Adaptive Retrieval**:
+   * Because Snowflake Arctic embeds coordinates hierarchically, switching between dimensions requires no separate models, adapters, or weight decompression—only slicing the first $m$ indices and applying $L_2$ renormalization (`sub_vec / norm`).
+   * This is implemented in the live web app via interactive dimension pills (`768-d`, `512-d`, `256-d`, `128-d`, `64-d`).
+
 
