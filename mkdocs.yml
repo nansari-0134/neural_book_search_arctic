@@ -59,8 +59,10 @@ extra_javascript:
 nav:
   - Overview: index.md
   - System Architecture: architecture.md
+  - Matryoshka Compression (MRL): matryoshka_mrl.md
   - Data Pipeline & Clustering: data_pipeline.md
   - Contrastive Fine-Tuning: fine_tuning.md
   - Iterative Negative Mining: iterative_mining.md
   - Benchmark Progression: benchmarks.md
   - Recall@K Metrics Math: metrics_explanation.md
+

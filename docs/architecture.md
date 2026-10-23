@@ -108,7 +108,11 @@ For any embedding $\mathbf{z} \in \mathbb{R}^d$ and a target Matryoshka dimensio
 
 In empirical benchmarks, truncating vectors from **768-d down to 256-d** reduces memory usage and dot-product compute by $3\times$ while retaining over **99% of Recall@10**.
 
+> [!TIP]
+> For the complete mathematical formulation, compression benchmarks on the 64k catalog, and live UI implementation, see the dedicated [Matryoshka Compression (MRL)](matryoshka_mrl.md) documentation page.
+
 ---
+
 
 ## 5. Finished Product Web Application Architecture
 
