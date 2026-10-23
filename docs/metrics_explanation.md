@@ -121,3 +121,60 @@ metrics = {f"R@{k}": float(np.mean(np.asarray(ranks) < k)) for k in (1, 5, 10, 5
 * `np.mean(...)` computes the proportion of `True` queries over all 32,170 test queries:
 
 $$\text{Recall@10} = \frac{\sum_{i=1}^{32,170} \mathbb{I}(\text{Rank}_i < 10)}{32,170} = \mathbf{74.70\%} \quad (\text{vs. Baseline: } 55.40\%)$$
+
+---
+
+## 3. Beyond Recall: MRR, mAP, and NDCG
+
+While Recall@K measures whether the target document was retrieved anywhere within the top $K$, it treats rank 1 and rank 10 identically. In production search and recommendation, position-weighted metrics are critical:
+
+### A. Mean Reciprocal Rank (MRR@K)
+
+MRR computes the average reciprocal rank of the first relevant document:
+
+$$\text{MRR}@K = \frac{1}{|Q|} \sum_{i=1}^{|Q|} \text{RR}_i, \quad \text{where } \text{RR}_i = \begin{cases} \frac{1}{\text{Rank}_i + 1} & \text{if } \text{Rank}_i < K \\ 0 & \text{otherwise} \end{cases}$$
+
+* **Rank 0 (1st place)**: $\text{RR} = \frac{1}{1} = 1.000$
+* **Rank 1 (2nd place)**: $\text{RR} = \frac{1}{2} = 0.500$
+* **Rank 4 (5th place)**: $\text{RR} = \frac{1}{5} = 0.200$
+* **Rank $\ge 10$**: $\text{RR} = 0.000$
+
+In our system, **MRR@10 progressed from `0.3082` (Baseline) to `0.4725` (Champion Retriever) and `0.6001` (Two-Stage Cascade Reranker)**, an improvement of **+94.7%**.
+
+---
+
+### B. Mean Average Precision (mAP@K)
+
+mAP measures the precision of the retriever across multiple recall cutoffs:
+
+$$\text{MAP}@K = \frac{1}{|Q|} \sum_{q=1}^{|Q|} \text{AP}(q), \quad \text{where } \text{AP}(q) = \frac{1}{\min(R_q, K)} \sum_{k=1}^K P(k) \cdot \text{rel}(k)$$
+
+> **Mathematical Connection**: In single-target retrieval (where each query has exactly 1 ground truth book), **mAP@K is mathematically identical to MRR@K**. For multi-relevant datasets (e.g., user reading lists with 10 relevant books), mAP rewards systems that cluster all relevant items near the top of the ranked list.
+
+---
+
+### C. Normalized Discounted Cumulative Gain (NDCG@K)
+
+NDCG is the gold standard ranking metric used across modern search engines. It applies a smooth logarithmic penalty for lower-ranked relevant items:
+
+$$\text{DCG}@K = \sum_{k=1}^K \frac{2^{\text{rel}_k} - 1}{\log_2(k + 1)}, \quad \text{NDCG}@K = \frac{\text{DCG}@K}{\text{IDCG}@K}$$
+
+Where $\text{IDCG}@K$ is the Ideal DCG achieved by an optimal sort.
+
+For single-target binary relevance ($\text{rel} \in \{0, 1\}$):
+$$\text{NDCG}@K = \begin{cases} \frac{1}{\log_2(\text{Rank} + 2)} & \text{if } \text{Rank} < K \\ 0 & \text{otherwise} \end{cases}$$
+
+Our **NDCG@10 progressed from `0.3642` (Baseline) $\rightarrow$ `0.5369` (Champion Retriever) $\rightarrow$ `0.6485` (Two-Stage Cascade)**.
+
+---
+
+### D. Summary Comparison: What Metric to Use When?
+
+| Metric | Primary Question Answered | Best Used For |
+| :--- | :--- | :--- |
+| **Recall@K** | *"Did the relevant book make it into the top K candidates?"* | Stage 1 candidate generation & retriever filtering |
+| **MRR@K** | *"How close to the top was the first correct answer?"* | Question answering, single-target book search |
+| **mAP@K** | *"How well are multiple relevant books ranked across the list?"* | Multi-book recommendation lists & reading shelves |
+| **NDCG@K** | *"How optimal is the entire ranked list with logarithmic position decay?"* | Final production search engine quality & rerankers |
+| **Latency** | *"How fast is the query executed under concurrent load?"* | Production SLAs, container sizing, and caching decisions |
+

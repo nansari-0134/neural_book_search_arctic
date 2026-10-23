@@ -19,6 +19,7 @@ from fastapi import FastAPI, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
+from pydantic import BaseModel, Field
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -89,6 +90,25 @@ async def search_endpoint(
 
     results = _engine.search(query=q.strip(), top_k=top_k, mrl_dim=dim, genre_filter=genre, rerank=rerank, mode=mode)
     return results
+
+class SearchRequestBody(BaseModel):
+    q: str = Field(..., description="Natural language search query")
+    dim: int = Field(768, ge=64, le=768, description="Matryoshka representation dimension")
+    genre: Optional[str] = Field(None, description="Optional genre / shelf filter")
+    top_k: int = Field(10, ge=1, le=50, description="Number of results to return")
+    rerank: bool = Field(False, description="Enable Cross-Encoder precision reranking over Top 50 candidates")
+    mode: str = Field("hybrid", description="Retrieval mode: 'hybrid', 'dense', or 'lexical'")
+
+@app.post("/api/search")
+async def search_endpoint_post(body: SearchRequestBody):
+    return await search_endpoint(
+        q=body.q,
+        dim=body.dim,
+        genre=body.genre,
+        top_k=body.top_k,
+        rerank=body.rerank,
+        mode=body.mode
+    )
 
 @app.get("/api/stats")
 async def stats_endpoint():
