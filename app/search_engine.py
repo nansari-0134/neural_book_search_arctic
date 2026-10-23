@@ -33,6 +33,7 @@ from src.config import (
 # Priority order for model checkpoint loading
 CHAMPION_MODEL_PATH = OUTPUT_DIR / "arctic_v3" / "best_model"
 FALLBACK_MODEL_PATH = OUTPUT_DIR / "arctic_v2" / "best_model"
+JINA_RERANKER_MODEL_PATH = OUTPUT_DIR / "jina_reranker" / "best_model"
 CROSS_ENCODER_MODEL_PATH = OUTPUT_DIR / "cross_encoder" / "best_model"
 
 CACHE_DIR = PROJECT_ROOT / "app" / ".cache"
@@ -59,12 +60,12 @@ class BookSearchEngine:
             
         self.model: Optional[SentenceTransformer] = None
         self.cross_encoder: Optional[CrossEncoder] = None
+        self.reranker_name: str = "None"
         self.catalog_ids: List[str] = []
         self.catalog_embeddings: Optional[np.ndarray] = None
         self.id_to_idx: Dict[str, int] = {}
         self.book_metadata: Dict[str, Dict[str, Any]] = {}
         self.is_ready = False
-
 
         if not lazy_load:
             self.initialize()
@@ -88,11 +89,26 @@ class BookSearchEngine:
         # 3. Load or compute catalog embeddings
         self._load_or_compute_embeddings()
         
-        # 4. Load Cross-Encoder reranker if available
-        if CROSS_ENCODER_MODEL_PATH.exists():
+        # 4. Load Cross-Encoder reranker if available (Priority: Jina Reranker v2 278M -> MiniLM)
+        if JINA_RERANKER_MODEL_PATH.exists():
+            print(f"[Search Engine] Loading Jina Reranker v2 from {JINA_RERANKER_MODEL_PATH.name}...")
+            try:
+                import src.jina_patch
+                self.cross_encoder = CrossEncoder(
+                    str(JINA_RERANKER_MODEL_PATH),
+                    max_length=256,
+                    trust_remote_code=True,
+                    device=self.device
+                )
+                self.reranker_name = "Jina Reranker v2 (278M Multilingual)"
+                print("[Search Engine] Jina Reranker v2 loaded successfully!")
+            except Exception as e:
+                print(f"[Search Engine] Warning: Could not load Jina Reranker: {e}")
+        elif CROSS_ENCODER_MODEL_PATH.exists():
             print(f"[Search Engine] Loading Cross-Encoder reranker from {CROSS_ENCODER_MODEL_PATH.name}...")
             try:
                 self.cross_encoder = CrossEncoder(str(CROSS_ENCODER_MODEL_PATH), max_length=256, device=self.device)
+                self.reranker_name = "MiniLM Cross-Encoder (22.7M)"
                 print("[Search Engine] Cross-Encoder loaded successfully!")
             except Exception as e:
                 print(f"[Search Engine] Warning: Could not load Cross-Encoder: {e}")
@@ -302,6 +318,7 @@ class BookSearchEngine:
             "bi_encoder_latency_ms": round(t_bi_encoder, 2),
             "rerank_latency_ms": round(rerank_latency_ms, 2),
             "reranked": is_reranked,
+            "reranker_name": self.reranker_name if is_reranked else None,
             "mrl_dim": dim,
             "genre_filter": genre_filter,
             "total_catalog": len(self.catalog_ids),

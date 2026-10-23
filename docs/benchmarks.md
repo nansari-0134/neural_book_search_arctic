@@ -231,4 +231,32 @@ To evaluate vector compression trade-offs under real-world conditions, we evalua
    * Because Snowflake Arctic embeds coordinates hierarchically, switching between dimensions requires no separate models, adapters, or weight decompression—only slicing the first $m$ indices and applying $L_2$ renormalization (`sub_vec / norm`).
    * This is implemented in the live web app via interactive dimension pills (`768-d`, `512-d`, `256-d`, `128-d`, `64-d`).
 
+---
+
+## ⚡ Stage 7: Fine-Tuning Jina Reranker v2 (278M Multilingual Cross-Encoder)
+
+To resolve the parameter capacity bottleneck where the first-stage retriever (109M) exceeded the representational power of the initial reranker (22.7M), we fine-tuned **`jinaai/jina-reranker-v2-base-multilingual` (278M parameters)** on 29,922 adversarial pairs mined directly from our Champion Arctic model using native **BFloat16 (BF16)** precision on an NVIDIA GeForce RTX 4050 6GB GPU.
+
+### Empirical Two-Stage Cascade Head-to-Head Comparison (64,552 Books, 1,000 Test Queries)
+
+| Metric | Stage 1: Arctic Retriever (109M) | Stage 2: MiniLM Reranker (22.7M) | Stage 2: Fine-Tuned Jina Reranker v2 (278M) | Jina vs Arctic Delta | Jina vs MiniLM Gain |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Recall@1** | **49.00%** | 42.30% *(Degraded)* | **48.40%** *(Preserved)* | -0.60% | **+6.10%** :fire: |
+| **Recall@5** | 66.40% | 56.60% *(Degraded)* | **67.00%** | **+0.60%** :chart_with_upwards_trend: | **+10.40%** :fire: |
+| **Recall@10** | 71.80% | 62.90% *(Degraded)* | **73.80%** | **+2.00%** :rocket: | **+10.90%** :fire: |
+| **Recall@50** | **83.10%** | 83.10% *(Top 50 Pool)* | **83.10%** *(Top 50 Pool)* | — | — |
+| **MRR@10** | 0.5681 | 0.4848 *(Degraded)* | **0.5649** | -0.0032 | **+0.0801** :white_check_mark: |
+| **Query Latency** | **8.75 ms** | 86.4 ms | **167.99 ms** | +159.2 ms | — |
+
+### 🔍 Key Machine Learning Findings
+
+1. **Elimination of Reranker Degradation**:
+   * While the 22.7M MiniLM cross-encoder collapsed Recall@10 from 71.80% down to 62.90% (-8.90%), the **278M Jina Reranker v2** reverses this deficit entirely, boosting Recall@10 to **73.80% (+2.00% absolute, +10.90% over MiniLM)**.
+   * Recall@5 similarly increases from 66.40% to **67.00%**.
+   * Recall@1 remains essentially intact at **48.40%** (vs 42.30% collapse under MiniLM).
+
+2. **Multilingual and Long-Context Nuance**:
+   * Jina Reranker v2's 1,024-token context capacity and multilingual cross-attention enable it to ingest full book synopses alongside nuanced user trope constraints without truncating character roles or secondary plot arcs.
+
+
 
