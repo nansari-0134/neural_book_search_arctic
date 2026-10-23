@@ -2,8 +2,8 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.3+-ee4c2c.svg?logo=pytorch)](https://pytorch.org/)
-[![Snowflake Arctic](https://img.shields.io/badge/Snowflake-Arctic--Embed--M--v1.5-blue?logo=snowflake)](https://huggingface.co/Snowflake/snowflake-arctic-embed-m-v1.5)
-[![Jina Reranker v2](https://img.shields.io/badge/Jina-Reranker--v2--278M-blueviolet)](https://huggingface.co/jinaai/jina-reranker-v2-base-multilingual)
+[![Hugging Face Retriever](https://img.shields.io/badge/%F0%9F%A4%97%20Retriever-arctic--embed--m--goodreads-yellow)](https://huggingface.co/nansari0134/arctic-embed-m-goodreads)
+[![Hugging Face Reranker](https://img.shields.io/badge/%F0%9F%A4%97%20Reranker-jina--reranker--v2--goodreads-orange)](https://huggingface.co/nansari0134/jina-reranker-v2-goodreads)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -26,7 +26,7 @@
 
 ## ⚡ Quick Start (< 2 Minutes)
 
-Launch the complete search platform using either Docker (recommended) or a local Python environment.
+Launch the complete search platform using Docker, a local Python environment, or load the fine-tuned models directly from Hugging Face Hub.
 
 ### Option A: 1-Command Docker Launch (Recommended)
 
@@ -54,6 +54,29 @@ pip install -r requirements.txt
 
 # 2. Launch the FastAPI server
 uvicorn app.app:app --host 0.0.0.0 --port 8080
+```
+
+---
+
+### Option C: Standalone Python Inference (Hugging Face Hub)
+
+If you only want to use the fine-tuned models directly in your own Python application or research notebook:
+
+```python
+from sentence_transformers import SentenceTransformer, CrossEncoder
+
+# 1. Load fine-tuned Retriever (Bi-Encoder with Matryoshka MRL)
+retriever = SentenceTransformer("nansari0134/arctic-embed-m-goodreads")
+query = "Represent this sentence for searching relevant passages: atmospheric gothic boarding school mystery"
+query_emb = retriever.encode(query, normalize_embeddings=True)
+
+# 2. Load fine-tuned Reranker (Cross-Encoder with Listwise InfoNCE)
+reranker = CrossEncoder("nansari0134/jina-reranker-v2-goodreads", trust_remote_code=True)
+pairs = [
+    ["atmospheric gothic mystery", "Title: The Secret History | Under the influence of a classics professor..."],
+    ["atmospheric gothic mystery", "Title: Pride and Prejudice | A story of manners and marriage..."]
+]
+reranked_scores = reranker.predict(pairs)
 ```
 
 ---

@@ -26,10 +26,14 @@ import os
 import argparse
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
-
-from src.config import OUTPUT_DIR
+OUTPUT_DIR = PROJECT_ROOT / "arctic_output"
 
 try:
     from huggingface_hub import HfApi, create_repo, whoami
@@ -177,23 +181,22 @@ def upload_single_model(model_path: Path, repo_id: str, card_generator):
         print(f"[Error] Model directory not found: {model_path}")
         return False
 
-    api = HfApi()
+    token = os.environ.get("HF_TOKEN")
+    api = HfApi(token=token)
 
     # Verify authentication
     try:
-        user_info = whoami()
+        user_info = whoami(token=token)
         print(f"[*] Authenticated as: {user_info.get('name')} ({user_info.get('fullname')})")
-    except Exception:
-        token = os.environ.get("HF_TOKEN")
-        if not token:
-            print("[Error] Not authenticated with Hugging Face! Please run: huggingface-cli login")
-            print("        Or set the HF_TOKEN environment variable.")
-            return False
+    except Exception as e:
+        print(f"[Error] Not authenticated with Hugging Face: {e}")
+        print("        Please run: huggingface-cli login or set the HF_TOKEN environment variable.")
+        return False
 
     # Create repo if it doesn't exist
     print(f"[*] Ensuring repository '{repo_id}' exists...")
     try:
-        create_repo(repo_id=repo_id, repo_type="model", exist_ok=True)
+        create_repo(repo_id=repo_id, repo_type="model", exist_ok=True, token=token)
         print("    [SUCCESS] Repository verified.")
     except Exception as e:
         print(f"    [Error] Failed to create repo: {e}")
@@ -216,8 +219,8 @@ def upload_single_model(model_path: Path, repo_id: str, card_generator):
     )
 
     print("=" * 65)
-    print(f"🎉 Model uploaded successfully!")
-    print(f"🔗 View on Hugging Face: https://huggingface.co/{repo_id}")
+    print(f"[SUCCESS] Model uploaded successfully!")
+    print(f"HF URL: https://huggingface.co/{repo_id}")
     print("=" * 65)
     return True
 
@@ -248,7 +251,7 @@ def main():
     elif args.model == "both":
         prefix = args.prefix
         if not prefix:
-            user = whoami().get("name")
+            user = whoami(token=os.environ.get("HF_TOKEN")).get("name")
             if not user:
                 print("[Error] Please provide --prefix (e.g. --prefix YOUR_USER)")
                 sys.exit(1)
