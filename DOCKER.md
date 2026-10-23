@@ -102,39 +102,33 @@ docker run \
 
 ---
 
-## 4. Docker Compose Workflows
+## 4. Multi-Service Docker Compose Workflows (Search + Redis + Elasticsearch)
 
-Two compose files are provided for developer ergonomics:
+The Compose stack deploys a complete enterprise search architecture:
+1. **`arctic-search`**: Two-Stage Cascade neural retriever (Snowflake Arctic Embed + Jina Reranker v2) on port 8080.
+2. **`redis`**: Sub-millisecond query result and query embedding cache on port 6379.
+3. **`elasticsearch`**: Distributed BM25 lexical keyword retrieval and catalog search cluster on port 9200.
 
-### GPU Mode: `docker-compose.yml`
-Leverages Compose v2 GPU device reservations:
+### Starting the Stack
 
 ```bash
-# Start in background
+# Option A: GPU Accelerated Stack (RTX / CUDA)
 docker compose up -d
 
-# Follow real-time logs
-docker compose logs -f
-
-# Check container health status
-docker compose ps
-
-# Stop service
-docker compose down
-```
-
-### CPU Mode: `docker-compose.cpu.yml`
-For development without NVIDIA GPUs:
-
-```bash
-# Start in background
+# Option B: CPU Stack
 docker compose -f docker-compose.cpu.yml up -d
 
-# Follow logs
-docker compose -f docker-compose.cpu.yml logs -f
+# Check all 3 service health statuses
+docker compose ps
 
-# Stop service
-docker compose -f docker-compose.cpu.yml down
+# Follow unified logs
+docker compose logs -f
+```
+
+### Indexing the 64,552 Books into Elasticsearch (Run Once)
+```bash
+# Execute indexing script inside the search container
+docker compose exec arctic-search python tools/index_elasticsearch.py
 ```
 
 ---

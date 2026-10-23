@@ -137,14 +137,14 @@ The decision to conclude bi-encoder fine-tuning at Stage 4 (Progressive Refineme
 ```mermaid
 graph TD
     subgraph Bottleneck ["1. Bi-Encoder Information Bottleneck"]
-        QD["500-word Book Synopsis"] -->|Independent Compression| VD["768-d Vector"]
-        QU["15-word Search Query"] -->|Independent Compression| VQ["768-d Vector"]
+        QD["500-word Book Synopsis"] -->|"Independent Compression"| VD["768-d Vector"]
+        QU["15-word Search Query"] -->|"Independent Compression"| VQ["768-d Vector"]
         VD & VQ --> DotProd["Dot Product (No Token-Level Cross-Attention)"]
     end
 
     subgraph Solution ["2. Two-Stage Retrieval Paradigm"]
-        Cat["64,552 Books"] -->|Stage 1: Arctic Retriever (15ms)| Top50["Top 50 Candidates (Recall@50: 85.51%)"]
-        Top50 -->|Stage 2: Cross-Encoder Reranker (45ms)| ReRank["Full Token-to-Token Cross-Attention"]
+        Cat["64,552 Books"] -->|"Stage 1: Arctic Retriever (15ms)"| Top50["Top 50 Candidates (Recall@50: 85.51%)"]
+        Top50 -->|"Stage 2: Cross-Encoder Reranker (45ms)"| ReRank["Full Token-to-Token Cross-Attention"]
         ReRank --> FinalTop10["Precision Top 10 (Target Recall@1: 55-65%+)"]
     end
 ```

@@ -48,9 +48,9 @@ In modern neural information retrieval, a single model cannot optimize both sub-
 ```mermaid
 graph LR
     Catalog["64,552 Catalog Books"] --> Stage1["Stage 1: Arctic Bi-Encoder<br>(MIPS Cosine Search)"]
-    Stage1 -->|15 ms (Recall@50: 85.51%)| Candidates["Top-50 Candidate Books"]
+    Stage1 -->|"15 ms (Recall@50: 85.51%)"| Candidates["Top-50 Candidate Books"]
     Candidates --> Stage2["Stage 2: Cross-Encoder Reranker<br>(Joint Multi-Head Attention)"]
-    Stage2 -->|45 ms (Target Recall@1: 55-65%+)| PrecisionRank["Top-10 Precision Ranked Books"]
+    Stage2 -->|"45 ms (Target Recall@1: 55-65%+)"| PrecisionRank["Top-10 Precision Ranked Books"]
 ```
 
 ### Architectural Comparison
@@ -120,7 +120,7 @@ The complete system includes a full-stack, production-ready web application (`ap
 
 ```mermaid
 graph TD
-    Client["Web Browser / Client UI"] <-->|HTTP / REST JSON| FastAPI["FastAPI Application (app/app.py)"]
+    Client["Web Browser / Client UI"] <-->|"HTTP / REST JSON"| FastAPI["FastAPI Application (app/app.py)"]
     
     subgraph Backend ["Inference & Search Engine (app/search_engine.py)"]
         FastAPI --> SearchEngine["BookSearchEngine Singleton"]
@@ -139,4 +139,55 @@ graph TD
     end
 ```
 
-The application is entirely self-contained, requiring zero external search infrastructure (such as Elasticsearch or Pinecone), running directly against the local SQLite database and pre-computed embedding cache.
+The application operates both in a self-contained standalone mode (using SQLite and local embedding cache) and in an enterprise hybrid distributed cluster mode (with Elasticsearch and Redis).
+
+---
+
+## 6. Enterprise Hybrid Architecture: Dense + Elasticsearch (BM25) + Redis Caching
+
+For large-scale, production deployments, ArcticDense supports a **Hybrid Search Pipeline** that combines dense semantic understanding with BM25 lexical precision and sub-millisecond caching:
+
+```mermaid
+flowchart TD
+    User["Client Search Query"] --> CacheCheck{"1. Redis Query Cache<br>(Key: hash(q, dim, mode))"}
+    
+    CacheCheck -- "Cache Hit (< 1ms)" --> ReturnCached["Return Cached JSON Results"]
+    
+    CacheCheck -- "Cache Miss" --> ParallelRetriever["2. Parallel Stage 1 Retrieval"]
+    
+    subgraph ParallelRetrievers ["Stage 1: Multi-Modal Candidate Generation"]
+        DenseRetriever["Snowflake Arctic Embed<br>Dense Semantic Matrix Search<br>(Top 50 Candidates)"]
+        BM25Retriever["Elasticsearch Cluster<br>BM25 Lexical Keyword Search<br>(Top 50 Candidates)"]
+    end
+    
+    ParallelRetriever --> DenseRetriever
+    ParallelRetriever --> BM25Retriever
+    
+    DenseRetriever --> RRF["3. Reciprocal Rank Fusion (RRF)<br>score(d) = sum 1 / (60 + rank(d))"]
+    BM25Retriever --> RRF
+    
+    RRF --> TopMerged["Merged Top 50 Candidates"]
+    
+    TopMerged --> Stage2Rerank["4. Stage 2: Jina Reranker v2<br>(Full Token Cross-Attention)"]
+    
+    Stage2Rerank --> HybridFusion["5. Hybrid Cascade Fusion<br>0.30 Dense + 0.70 Cross-Encoder"]
+    
+    HybridFusion --> Enrich["6. SQLite Metadata Enrichment"]
+    Enrich --> RedisWrite["7. Populate Redis Cache (TTL: 1h)"]
+    RedisWrite --> ClientResponse["Client Response"]
+```
+
+### Reciprocal Rank Fusion (RRF) Formulation
+To combine dense semantic candidates and BM25 lexical candidates without needing calibrated scores across different distributions, we apply **Reciprocal Rank Fusion (RRF)**:
+
+$$\text{RRF}(d) = \sum_{m \in \{\text{Dense}, \text{BM25}\}} \frac{1}{k + \text{rank}_m(d)}$$
+
+Where:
+* $k = 60$ is the standard smoothing constant (Cormack et al.).
+* $\text{rank}_m(d)$ is the 1-based ordinal rank of document $d$ in retrieval stream $m$.
+
+### Key Benefits of Hybrid + Redis:
+1. **Zero Semantic Drift on Exact Keywords**: Queries with exact author names (*"Neil Gaiman"*), specific ISBNs, or uncommon proper nouns match instantly via Elasticsearch BM25.
+2. **Deep Trope Understanding**: Complex natural language queries (*"rainy cyberpunk detective investigating android murder"*) match via Snowflake Arctic dense vectors.
+3. **Sub-Millisecond Repeat Queries**: Popular and repeated searches are served directly from Redis RAM in **$< 1\text{ms}$**, completely bypassing neural inference and database I/O.
+

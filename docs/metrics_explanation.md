@@ -8,8 +8,8 @@ This guide breaks down [`neural_book_search_arctic/src/metrics.py`](file:///c:/U
 
 ```mermaid
 graph TD
-    A["Catalog Books (64,552 books)"] -->|Offline Encode Once| B["Catalog Matrix (64552 x 768)"]
-    C["Test Queries (32,170 queries)"] -->|Stream in Chunks of 128| D["Batch Query Matrix (128 x 768)"]
+    A["Catalog Books (64,552 books)"] -->|"Offline Encode Once"| B["Catalog Matrix (64552 x 768)"]
+    C["Test Queries (32,170 queries)"] -->|"Stream in Chunks of 128"| D["Batch Query Matrix (128 x 768)"]
     
     B --> E["2D Block-Chunked Dot-Product"]
     D --> E

@@ -12,10 +12,10 @@ We applied a strict 4-stage filtering funnel:
 
 ```mermaid
 graph TD
-    A["Raw Goodreads Dump<br><b>2,360,655 Records</b>"] -->|Filter 1: English Language Only| B["English Editions<br><b>~1,780,000 Records</b><br><i>(-580,000 foreign language records)</i>"]
-    B -->|Filter 2: Description & Genre Completeness| C["Complete Books with Synopsis<br><b>~920,000 Records</b><br><i>(-860,000 empty description records)</i>"]
-    C -->|Filter 3: Quality & Reader Shelf Threshold| D["Popular Shelved Works<br><b>~180,000 Records</b><br><i>(-740,000 unread/pamphlet/spam entries)</i>"]
-    D -->|Filter 4: Work-ID Deduplication & Curation| E["Final Clean Catalog<br><b>64,552 Distinct Books</b><br><i>100% with Title, Description, Shelves</i>"]
+    A["Raw Goodreads Dump<br><b>2,360,655 Records</b>"] -->|"Filter 1: English Language Only"| B["English Editions<br><b>~1,780,000 Records</b><br><i>(-580,000 foreign language records)</i>"]
+    B -->|"Filter 2: Description & Genre Completeness"| C["Complete Books with Synopsis<br><b>~920,000 Records</b><br><i>(-860,000 empty description records)</i>"]
+    C -->|"Filter 3: Quality & Reader Shelf Threshold"| D["Popular Shelved Works<br><b>~180,000 Records</b><br><i>(-740,000 unread/pamphlet/spam entries)</i>"]
+    D -->|"Filter 4: Work-ID Deduplication & Curation"| E["Final Clean Catalog<br><b>64,552 Distinct Books</b><br><i>100% with Title, Description, Shelves</i>"]
 
     style A fill:#f9f9f9,stroke:#333,stroke-width:2px
     style E fill:#e1f5fe,stroke:#0288d1,stroke-width:3px
@@ -120,7 +120,7 @@ graph TD
     Work --> E3["Edition #3: Deluxe Box (ID: 84920)"]
 
     subgraph "Work-Cluster Rule"
-        Work -->|Lock Entire Cluster| Split["Assigned 100% to Train Split ONLY"]
+        Work -->|"Lock Entire Cluster"| Split["Assigned 100% to Train Split ONLY"]
     end
 ```
 

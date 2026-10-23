@@ -50,13 +50,13 @@ if len(set(pos_ids)) < len(pos_ids):
 ```mermaid
 graph TD
     S1["Stage 1: Pretrained Baseline (Zero-Shot Arctic v1.5)<br><i>Test Recall@10: 55.40% | Recall@50: 69.57%</i>"]
-    -->|In-Batch Contrastive Training (258,250 pairs, 12.7h)| S2["Stage 2: In-Batch Contrastive Training<br><i>Test Recall@10: 64.67% (+9.27%) | Recall@50: 78.20%</i>"]
+    -->|"In-Batch Contrastive Training (258,250 pairs, 12.7h)"| S2["Stage 2: In-Batch Contrastive Training<br><i>Test Recall@10: 64.67% (+9.27%) | Recall@50: 78.20%</i>"]
     
-    S2 -->|8-Layer Adversarial Mining (Ranks 2-35)| S3_Mine["Mined 199,808 Adversarial Pairs (Top-5 Negs)"]
-    S3_Mine -->|Targeted Adversarial Training (Chunk Size 12, 6.9h)| S3["Stage 3: Targeted Hard-Negative Training<br><i>Test Recall@10: 73.96% (+18.56%) | Recall@50: 84.66%</i>"]
+    S2 -->|"8-Layer Adversarial Mining (Ranks 2-35)"| S3_Mine["Mined 199,808 Adversarial Pairs (Top-5 Negs)"]
+    S3_Mine -->|"Targeted Adversarial Training (Chunk Size 12, 6.9h)"| S3["Stage 3: Targeted Hard-Negative Training<br><i>Test Recall@10: 73.96% (+18.56%) | Recall@50: 84.66%</i>"]
     
-    S3 -->|Progressive Mining (3 Fresh + 2 Retained Negs)| S4_Mine["Mined 179,319 Progressive Pairs"]
-    S4_Mine -->|Progressive Refinement (Cosine Warm-Start, 6.2h)| S4["Stage 4: Progressive Refinement (Champion Model)<br><i>Test Recall@10: 74.70% (+19.30%) | Recall@50: 85.51% (+15.94%)</i>"]
+    S3 -->|"Progressive Mining (3 Fresh + 2 Retained Negs)"| S4_Mine["Mined 179,319 Progressive Pairs"]
+    S4_Mine -->|"Progressive Refinement (Cosine Warm-Start, 6.2h)"| S4["Stage 4: Progressive Refinement (Champion Model)<br><i>Test Recall@10: 74.70% (+19.30%) | Recall@50: 85.51% (+15.94%)</i>"]
 
     style S1 fill:#1e293b,stroke:#64748b,stroke-width:2px,color:#fff
     style S2 fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#fff

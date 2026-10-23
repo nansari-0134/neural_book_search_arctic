@@ -19,6 +19,10 @@ fastapi>=0.110.0
 uvicorn>=0.28.0
 jinja2>=3.1.0
 
+# Search Infrastructure & Caching
+elasticsearch>=8.12.0
+redis>=5.0.0
+
 # LangChain Integration
 langchain>=0.2.0
 langchain-huggingface>=0.0.1

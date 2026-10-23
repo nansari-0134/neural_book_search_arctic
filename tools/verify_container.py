@@ -52,28 +52,38 @@ def main():
         print(f"    Device:     {stats.get('device')}")
         print(f"    FP16:       {stats.get('fp16_enabled')}")
         print(f"    Dimensions: {stats.get('supported_mrl_dimensions')}")
+        redis_info = stats.get('redis_cache', {})
+        print(f"    Redis Cache: Connected={redis_info.get('connected')} | Hits={redis_info.get('hits')} | Misses={redis_info.get('misses')}")
+        es_info = stats.get('elasticsearch', {})
+        print(f"    Elasticsearch: Connected={es_info.get('connected')} | Docs={es_info.get('document_count')}")
 
     # 3. Dense Retrieval Test
     query = "cyberpunk detective artificial intelligence"
-    params = urllib.parse.urlencode({"q": query, "dim": 768, "top_k": 3, "rerank": "false"})
+    params = urllib.parse.urlencode({"q": query, "dim": 768, "top_k": 3, "rerank": "false", "mode": "hybrid"})
     search_url = f"{base_url}/api/search?{params}"
-    dense_res = check_endpoint(search_url, f"Dense Retrieval Query ('{query}')")
+    dense_res = check_endpoint(search_url, f"Retrieval Query ('{query}')")
     if dense_res and "results" in dense_res:
-        print(f"    Retrieved {len(dense_res['results'])} books in {dense_res.get('total_latency_ms', 0):.1f}ms")
+        mode_used = dense_res.get("mode", "dense")
+        cached = dense_res.get("cache_hit", False)
+        print(f"    Mode: {mode_used} | Cache Hit: {cached} | Latency: {dense_res.get('latency_ms', 0):.1f}ms")
         for i, b in enumerate(dense_res["results"]):
-            print(f"      {i+1}. {b.get('title')} (Sim: {b.get('similarity_score', 0):.3f})")
+            print(f"      {i+1}. {b.get('title')} (Score: {b.get('score', 0):.3f})")
 
-    # 4. Two-Stage Cascade Reranking Test
-    params_rerank = urllib.parse.urlencode({"q": query, "dim": 768, "top_k": 3, "rerank": "true"})
+    # 4. Repeat Query Cache Verification Test
+    cached_res = check_endpoint(search_url, f"Repeat Query Cache Test ('{query}')")
+    if cached_res and "results" in cached_res:
+        print(f"    Cache Hit Flag: {cached_res.get('cache_hit')} | Latency: {cached_res.get('latency_ms', 0):.1f}ms")
+
+    # 5. Two-Stage Cascade Reranking Test
+    params_rerank = urllib.parse.urlencode({"q": query, "dim": 768, "top_k": 3, "rerank": "true", "mode": "hybrid"})
     cascade_url = f"{base_url}/api/search?{params_rerank}"
     cascade_res = check_endpoint(cascade_url, "Two-Stage Cascade Rerank Query")
     if cascade_res and "results" in cascade_res:
-        reranker = cascade_res.get("reranker", "None")
+        reranker = cascade_res.get("reranker_name", "None")
         print(f"    Reranked via: {reranker}")
-        print(f"    Retrieved {len(cascade_res['results'])} books in {cascade_res.get('total_latency_ms', 0):.1f}ms")
+        print(f"    Retrieved {len(cascade_res['results'])} books in {cascade_res.get('latency_ms', 0):.1f}ms")
         for i, b in enumerate(cascade_res["results"]):
-            score = b.get('reranker_score') or b.get('similarity_score', 0)
-            print(f"      {i+1}. {b.get('title')} (Score: {score:.3f})")
+            print(f"      {i+1}. {b.get('title')} (Score: {b.get('score', 0):.3f})")
 
     print("=" * 60)
     print("Verification complete!")

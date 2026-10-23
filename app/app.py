@@ -71,7 +71,8 @@ async def search_endpoint(
     dim: int = Query(768, ge=64, le=768, description="Matryoshka representation dimension"),
     genre: Optional[str] = Query(None, description="Optional genre / shelf filter"),
     top_k: int = Query(10, ge=1, le=50, description="Number of results to return"),
-    rerank: bool = Query(False, description="Enable Cross-Encoder precision reranking over Top 50 candidates")
+    rerank: bool = Query(False, description="Enable Cross-Encoder precision reranking over Top 50 candidates"),
+    mode: str = Query("hybrid", description="Retrieval mode: 'hybrid' (Dense + BM25), 'dense' (Arctic vector only), or 'lexical' (Elasticsearch BM25)")
 ):
     global _engine, _init_error
     if not q or not q.strip():
@@ -86,7 +87,7 @@ async def search_endpoint(
             status_code=503
         )
 
-    results = _engine.search(query=q.strip(), top_k=top_k, mrl_dim=dim, genre_filter=genre, rerank=rerank)
+    results = _engine.search(query=q.strip(), top_k=top_k, mrl_dim=dim, genre_filter=genre, rerank=rerank, mode=mode)
     return results
 
 @app.get("/api/stats")
@@ -106,6 +107,8 @@ async def stats_endpoint():
         "device": _engine.device,
         "fp16_enabled": _engine.use_fp16,
         "supported_mrl_dimensions": [64, 128, 256, 512, 768],
+        "redis_cache": _engine.cache_service.get_stats(),
+        "elasticsearch": _engine.elastic_service.get_stats(),
         "top_genres": [
             "fiction", "fantasy", "romance", "young-adult", "mystery",
             "historical-fiction", "science-fiction", "thriller", "non-fiction",

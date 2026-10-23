@@ -29,6 +29,8 @@ from src.config import (
     MODEL_NAME, DB_FILE, OUTPUT_DIR, MAX_SEQ_LENGTH,
     QUERY_INSTRUCTION, DEVICE, USE_FP16
 )
+from src.cache_service import RedisCacheService
+from src.elastic_search_service import ElasticBookIndex
 
 # Priority order for model checkpoint loading
 CHAMPION_MODEL_PATH = OUTPUT_DIR / "arctic_v3" / "best_model"
@@ -67,6 +69,10 @@ class BookSearchEngine:
         self.id_to_idx: Dict[str, int] = {}
         self.book_metadata: Dict[str, Dict[str, Any]] = {}
         self.is_ready = False
+        
+        # Redis cache and Elasticsearch services
+        self.cache_service = RedisCacheService()
+        self.elastic_service = ElasticBookIndex()
 
         if not lazy_load:
             self.initialize()
@@ -215,71 +221,118 @@ class BookSearchEngine:
         top_k: int = 10,
         mrl_dim: int = 768,
         genre_filter: Optional[str] = None,
-        rerank: bool = False
+        rerank: bool = False,
+        mode: str = "hybrid"
     ) -> Dict[str, Any]:
         """
-        Executes semantic search with Matryoshka dimension truncation, optional genre filtering,
-        and optional Stage 2 Cross-Encoder precision reranking over top candidates.
+        Executes search with Matryoshka dimension truncation, optional genre filtering,
+        lexical BM25 (Elasticsearch) + dense semantic (Arctic) Hybrid Cascade Fusion,
+        and Stage 2 Cross-Encoder precision reranking over top candidates.
+        Results are cached in Redis for sub-millisecond retrieval on repeat queries.
         """
         if not self.is_ready:
             self.initialize()
 
+        # 0. Check Redis cache first (sub-millisecond repeat queries)
+        cached = self.cache_service.get_query_cache(
+            query=query, dim=mrl_dim, rerank=rerank, mode=mode, genre=genre_filter
+        )
+        if cached is not None:
+            return cached
+
         t0 = time.perf_counter()
         query_text = f"{QUERY_INSTRUCTION}{query.strip()}"
-
-        # 1. Encode query with Stage 1 Bi-Encoder
-        q_emb = self.model.encode(
-            query_text,
-            convert_to_numpy=True,
-            normalize_embeddings=False
-        ).astype("float32")
-
-        # 2. Apply Matryoshka Truncation & L2 Re-normalization
-        dim = min(mrl_dim, self.catalog_embeddings.shape[1])
-        q_vec = q_emb[:dim]
-        q_norm = np.linalg.norm(q_vec)
-        if q_norm > 0:
-            q_vec = q_vec / q_norm
-
-        doc_matrix = self.catalog_embeddings[:, :dim]
-        if dim < self.catalog_embeddings.shape[1]:
-            # Re-normalize document slices for lower dimension
-            doc_norms = np.linalg.norm(doc_matrix, axis=1, keepdims=True)
-            doc_norms[doc_norms == 0] = 1e-12
-            doc_matrix = doc_matrix / doc_norms
-
-        # 3. Compute cosine similarities across catalog
-        scores = doc_matrix @ q_vec
-
-        # Determine candidate pool size
         candidate_k = 50 if (rerank and self.cross_encoder is not None) else top_k
 
-        # 4. Optional genre filtering
-        if genre_filter:
-            target_genre = genre_filter.strip().lower()
-            filtered_indices = []
-            for idx, bid in enumerate(self.catalog_ids):
-                if target_genre in self.book_metadata[bid]["all_shelves"]:
-                    filtered_indices.append(idx)
-            if filtered_indices:
-                filtered_indices = np.array(filtered_indices)
-                sub_scores = scores[filtered_indices]
-                sub_top_k = min(candidate_k, len(sub_scores))
-                top_sub_idx = np.argpartition(-sub_scores, sub_top_k - 1)[:sub_top_k]
-                sorted_sub_idx = top_sub_idx[np.argsort(-sub_scores[top_sub_idx])]
-                candidate_indices = filtered_indices[sorted_sub_idx]
-            else:
-                candidate_indices = []
-        else:
-            top_k_clamp = min(candidate_k, len(scores))
-            top_sub_indices = np.argpartition(-scores, top_k_clamp - 1)[:top_k_clamp]
-            candidate_indices = top_sub_indices[np.argsort(-scores[top_sub_indices])]
+        # Check if Elasticsearch lexical search should run
+        es_active = self.elastic_service.is_connected
+        use_bm25 = (mode in ("hybrid", "lexical")) and es_active
+        bm25_hits = []
+        if use_bm25:
+            bm25_hits = self.elastic_service.search_bm25(query=query, top_k=candidate_k, genre_filter=genre_filter)
 
-        t_bi_encoder = (time.perf_counter() - t0) * 1000
+        # 1. Pure Lexical Mode (BM25 Only)
+        if mode == "lexical" and es_active and bm25_hits:
+            candidate_indices = []
+            for hit in bm25_hits:
+                bid = str(hit["book_id"])
+                if bid in self.id_to_idx:
+                    candidate_indices.append(self.id_to_idx[bid])
+            candidate_indices = np.array(candidate_indices[:candidate_k])
+            scores = np.zeros(len(self.catalog_ids), dtype=np.float32)
+            for hit in bm25_hits:
+                bid = str(hit["book_id"])
+                if bid in self.id_to_idx:
+                    scores[self.id_to_idx[bid]] = float(hit.get("norm_bm25_score", 0.0))
+            t_bi_encoder = 0.0
+            dim = mrl_dim
+        else:
+            # 2. Dense Vector Encoding with Stage 1 Bi-Encoder
+            q_emb = self.model.encode(
+                query_text,
+                convert_to_numpy=True,
+                normalize_embeddings=False
+            ).astype("float32")
+
+            # Matryoshka Truncation & L2 Re-normalization
+            dim = min(mrl_dim, self.catalog_embeddings.shape[1])
+            q_vec = q_emb[:dim]
+            q_norm = np.linalg.norm(q_vec)
+            if q_norm > 0:
+                q_vec = q_vec / q_norm
+
+            doc_matrix = self.catalog_embeddings[:, :dim]
+            if dim < self.catalog_embeddings.shape[1]:
+                doc_norms = np.linalg.norm(doc_matrix, axis=1, keepdims=True)
+                doc_norms[doc_norms == 0] = 1e-12
+                doc_matrix = doc_matrix / doc_norms
+
+            # Cosine similarities across catalog
+            scores = doc_matrix @ q_vec
+
+            # Optional genre filtering
+            if genre_filter:
+                target_genre = genre_filter.strip().lower()
+                filtered_indices = []
+                for idx, bid in enumerate(self.catalog_ids):
+                    if target_genre in self.book_metadata[bid]["all_shelves"]:
+                        filtered_indices.append(idx)
+                if filtered_indices:
+                    filtered_indices = np.array(filtered_indices)
+                    sub_scores = scores[filtered_indices]
+                    sub_top_k = min(candidate_k, len(sub_scores))
+                    top_sub_idx = np.argpartition(-sub_scores, sub_top_k - 1)[:sub_top_k]
+                    sorted_sub_idx = top_sub_idx[np.argsort(-sub_scores[top_sub_idx])]
+                    dense_indices = filtered_indices[sorted_sub_idx]
+                else:
+                    dense_indices = np.array([], dtype=int)
+            else:
+                top_k_clamp = min(candidate_k, len(scores))
+                top_sub_indices = np.argpartition(-scores, top_k_clamp - 1)[:top_k_clamp]
+                dense_indices = top_sub_indices[np.argsort(-scores[top_sub_indices])]
+
+            t_bi_encoder = (time.perf_counter() - t0) * 1000
+
+            # 3. Hybrid Merge (Reciprocal Rank Fusion: RRF) if BM25 is active
+            if use_bm25 and bm25_hits:
+                rrf_scores = {}
+                for r, idx in enumerate(dense_indices):
+                    bid = self.catalog_ids[idx]
+                    rrf_scores[bid] = rrf_scores.get(bid, 0.0) + (1.0 / (60.0 + r + 1))
+                for r, hit in enumerate(bm25_hits):
+                    bid = str(hit["book_id"])
+                    if bid in self.id_to_idx:
+                        rrf_scores[bid] = rrf_scores.get(bid, 0.0) + (1.0 / (60.0 + r + 1))
+
+                sorted_bids = sorted(rrf_scores.keys(), key=lambda b: rrf_scores[b], reverse=True)[:candidate_k]
+                candidate_indices = np.array([self.id_to_idx[b] for b in sorted_bids if b in self.id_to_idx])
+            else:
+                candidate_indices = dense_indices
+
         rerank_latency_ms = 0.0
         is_reranked = False
 
-        # 5. Stage 2: Cross-Encoder Reranking
+        # 4. Stage 2: Cross-Encoder Reranking
         if rerank and self.cross_encoder is not None and len(candidate_indices) > 0:
             t_ce_start = time.perf_counter()
             passages = []
@@ -312,7 +365,7 @@ class BookSearchEngine:
 
         total_elapsed_ms = (time.perf_counter() - t0) * 1000
 
-        # 6. Enrich results
+        # 5. Enrich results
         results = []
         for i, idx in enumerate(best_indices):
             bid = self.catalog_ids[idx]
@@ -334,8 +387,10 @@ class BookSearchEngine:
             }
             results.append(item)
 
-        return {
+        actual_mode = "hybrid" if (use_bm25 and bm25_hits) else ("lexical" if mode == "lexical" else "dense")
+        response_payload = {
             "query": query,
+            "mode": actual_mode,
             "latency_ms": round(total_elapsed_ms, 2),
             "bi_encoder_latency_ms": round(t_bi_encoder, 2),
             "rerank_latency_ms": round(rerank_latency_ms, 2),
@@ -343,9 +398,22 @@ class BookSearchEngine:
             "reranker_name": self.reranker_name if is_reranked else None,
             "mrl_dim": dim,
             "genre_filter": genre_filter,
+            "cache_hit": False,
             "total_catalog": len(self.catalog_ids),
             "results": results
         }
+
+        # Cache in Redis with 1-hour TTL
+        self.cache_service.set_query_cache(
+            query=query,
+            dim=mrl_dim,
+            rerank=rerank,
+            mode=mode,
+            genre=genre_filter,
+            result=response_payload
+        )
+
+        return response_payload
 
 
 

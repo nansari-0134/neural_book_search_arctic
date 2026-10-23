@@ -68,49 +68,27 @@ docker run \
 
 ---
 
-## 4. Docker Compose Orchestration
+## 4. Multi-Service Docker Compose Orchestration (Search + Elasticsearch + Redis)
 
-### GPU Configuration (`docker-compose.yml`)
-```yaml
-services:
-  arctic-search:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: arctic-search:latest
-    container_name: arctic_book_search
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - PORT=8080
-      - HOST=0.0.0.0
-      - DEVICE=cuda
-      - OMP_NUM_THREADS=8
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 45s
-```
+The production Docker Compose stack spins up 3 networked services:
+1. **`arctic-search`**: FastAPI + GPU-accelerated Snowflake Arctic & Jina Reranker v2 engine
+2. **`redis`**: Sub-millisecond query result and embedding vector cache
+3. **`elasticsearch`**: Distributed BM25 lexical keyword retrieval and faceted catalog index
 
-Run GPU service:
+### Running the Full Stack
+
 ```bash
+# GPU-Accelerated Stack (Search Engine + Redis + Elasticsearch)
 docker compose up -d
-```
 
-### CPU Configuration (`docker-compose.cpu.yml`)
-Run CPU service:
-```bash
+# CPU-Only Stack
 docker compose -f docker-compose.cpu.yml up -d
+
+# Check cluster health
+docker compose ps
+
+# Index 64,552 books into Elasticsearch (run once):
+docker compose exec arctic-search python tools/index_elasticsearch.py
 ```
 
 ---
