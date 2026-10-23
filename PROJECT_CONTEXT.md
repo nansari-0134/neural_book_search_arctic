@@ -44,7 +44,7 @@
 | **3c** | **Iterative Negative Mining (Cycle 2)**| ✅ **COMPLETE** | `data/train_arctic_v3.jsonl` | 179,319 pairs mined; 1.44M false negatives shielded |
 | **3d** | **Fine-Tuning Cycle 2** | ✅ **COMPLETE** | `arctic_output/arctic_v3/best_model` | Test: R@1: 35.48%, R@10: 74.70%, R@50: 85.51% (+19.3% R@10) |
 | **4** | **Final Benchmarking & Progression Comparison** | ✅ **COMPLETE** | `results/final_comparison.json` | Complete progression across Baseline, Phase 1, Cycle 1, and Cycle 2 |
-| **5** | **Documentation Build & Site Finalization** | ⏳ **READY TO START** | `site/` | Fully audited MkDocs documentation |
+| **5** | **Documentation Build & Site Finalization** | ✅ **COMPLETE** | `site/` | Fully audited MkDocs documentation (strict mode 0 warnings) |
 
 ---
 
